@@ -10,11 +10,11 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const SERVER_URL = "http://localhost:3001";
 let serverProcess = null;
 
-// Initialize Firebase Client SDK to obtain authentic ID tokens for testing
+// Initialize Firebase Client SDK to obtain authentic ID tokens for testing (reads strictly from environment)
 const clientApp = initializeApp({
-  apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyCvENhVhJc7CqRMNVWiZwFpG-R0c9vRqVU",
-  authDomain: "gen-lang-client-0022579334.firebaseapp.com",
-  projectId: "gen-lang-client-0022579334"
+  apiKey: process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || `${process.env.FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: process.env.FIREBASE_PROJECT_ID
 });
 const clientAuth = getAuth(clientApp);
 

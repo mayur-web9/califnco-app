@@ -1,4 +1,5 @@
 import { auth, db } from "../config/firebase";
+import { registerForPushNotificationsAsync } from "./notificationHelper";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -36,6 +37,10 @@ export async function login(email, password) {
   const uid = cred.user.uid;
   const snap = await getDoc(doc(db, "users", uid));
   if (!snap.exists()) throw new Error("User profile not found. Please contact support.");
+  
+  // Register push notification token on login
+  registerForPushNotificationsAsync(uid).catch(e => console.warn("Push token registration error:", e.message));
+
   return { uid, ...snap.data() };
 }
 

@@ -124,12 +124,9 @@ Manages authentication for three distinct roles: `Customer`, `Dealer`, and `Admi
 **Q1: Where are the user roles stored?**  
 *Answer:* Primarily in Firestore at `users/{uid}` for simple real-time querying by both the client and admin panel, and mirrored in Firebase Auth Custom Claims during admin actions to provide instant rule evaluation without extra document reads.
 
-**Q2: What are the credentials for the test accounts?**  
+**Q2: Where are the credentials for the test accounts located?**  
 *Answer:*
-- Admin: `admin@test.com` / `Admin@123456`
-- Approved Dealer: `dealer@test.com` / `Dealer@123456`
-- Pending Dealer: `dealer.pending@test.com` / `Dealer@123456`
-- Customer: `customer@test.com` / `Customer@123456`
+All test credentials (Admin, Approved Dealer, Pending Dealer, Customer) along with test payment details are centralized in [docs/SUBMISSION.md](file:///c:/Users/MAYUR/OneDrive/Desktop/Assignment/docs/SUBMISSION.md) to keep architectural explanations clean and secure.
 
 ---
 
@@ -231,4 +228,56 @@ Provides fast locality and pincode autofill for Indian delivery addresses withou
 - Implements a proxy endpoint on the backend: `GET /address/search?q=...`
 - Sends a compliant `User-Agent` header (`Califnco-WaterPurifier-App/1.0`).
 - Triggered strictly on explicit user button tap ("Lookup Location") rather than continuous autocomplete keystrokes, adhering strictly to OSM Nominatim Acceptable Use Policy.
+
+---
+
+## Multi-Channel Notifications (Email, SMS, FCM)
+
+### What it does
+Provides unified multi-channel transactional notifications across Email, SMS, and Native Push:
+1. **Order Confirmation**: Dispatched automatically when `/payment/verify` completes payment verification and records the order.
+2. **Order Status Updates**: Dispatched via `PATCH /orders/:id/status` (e.g. `shipped`, `out_for_delivery`, `delivered`).
+3. **Service Request Updates**: Dispatched via `PATCH /services/:id/status` when technicians are assigned or tickets updated.
+
+### Delivery Channels & Zero-Cost Architecture
+- **Transactional Email**: Uses **Brevo REST API v3** (`https://api.brevo.com/v3/smtp/email`), providing 300 free emails per day without credit card requirements or mandatory custom domain DNS lock-in.
+- **Transactional SMS**: Integrated with **TextBee Free Android Gateway** (`https://textbee.dev`), routing through an Android phone's carrier SIM card. This bypasses India's mandatory ₹5,900 TRAI DLT registration and template approval fees while delivering real SMS to customer phones.
+- **Native Device Push (FCM)**: Native push tokens are automatically registered upon user login via `expo-notifications` and saved to `users/{uid}.fcmToken`. The backend dispatches notifications directly via Firebase Admin Messaging SDK (`admin.messaging().send`).
+
+---
+
+## Mobile Dark Mode & Pinch-to-Zoom
+
+### What it does
+1. **Persistent Dark Mode**:
+   - Implemented via `useTheme` hook (`mobile/src/hooks/useTheme.js`) with React Context and `AsyncStorage` (`@califnco_theme_mode`).
+   - Seamlessly switches between a crisp daylight theme (`#f5f7fa` / `#0a2540`) and a luxury obsidian navy dark theme (`#070d19` / `#0f172a` / `#00b4d8`).
+   - Dynamic `StatusBar` style adaptation (`light` vs `dark`).
+   - Interactive toggle switch integrated in `ProfileScreen.js` with instant reactive re-rendering across tab bars, headers, and cards.
+2. **Pinch-to-Zoom Product Image Viewer**:
+   - Embedded in `ProductDetailScreen.js` with an interactive "Tap to Zoom" indicator badge.
+   - Opens a fullscreen modal with dark blurred backdrop.
+   - Built with native `ScrollView` utilizing `maximumZoomScale={4}`, `minimumZoomScale={1}`, `centerContent={true}`, and smooth pinch gesture handling.
+
+---
+
+## EAS Development APK Build (Without Android Studio)
+
+### How it works
+Expo Application Services (EAS) builds the standalone Android `.apk` package entirely in the cloud, eliminating the need to install Android Studio, Java JDK, or the Android SDK/NDK on your local computer.
+
+1. **Prerequisites**:
+   ```bash
+   npm install -g eas-cli
+   eas login
+   ```
+2. **Configure project**:
+   Ensure `mobile/app.json` contains `"package": "com.califnco.app"` and `mobile/google-services.json` is present.
+3. **Run Cloud Build**:
+   ```bash
+   cd mobile
+   eas build --platform android --profile preview
+   ```
+   *Note: Using `--profile preview` produces a direct installable `.apk` file (rather than an `.aab` Google Play store bundle) that can be installed on any physical Android phone or emulator.*
+
 

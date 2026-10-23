@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../config/firebase";
 import { getUserProfile } from "../services/authService";
+import { registerForPushNotificationsAsync } from "../services/notificationHelper";
 
 const AuthContext = createContext(null);
 
@@ -16,6 +17,10 @@ export function AuthProvider({ children }) {
         const prof = await getUserProfile(firebaseUser.uid);
         setUser(firebaseUser);
         setProfile(prof);
+        // Register native device push token and persist to users/{uid}.fcmToken
+        registerForPushNotificationsAsync(firebaseUser.uid).catch(err => {
+          console.warn("FCM push registration warning:", err.message);
+        });
       } else {
         setUser(null);
         setProfile(null);

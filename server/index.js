@@ -6,23 +6,44 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 const { admin, db } = require("./firebaseAdmin");
+const {
+  notifyOrderConfirmed,
+  notifyOrderStatusChanged
+} = require("./services/notificationService");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize Razorpay client
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder";
-const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || "rzp_test_secret_placeholder";
+// Razorpay configuration & validation
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+const isProduction = process.env.NODE_ENV === "production";
+const isPlaceholder = !razorpayKeyId ||
+  !razorpayKeySecret ||
+  razorpayKeyId === "rzp_test_placeholder" ||
+  razorpayKeySecret === "rzp_test_secret_placeholder" ||
+  razorpayKeyId.trim() === "" ||
+  razorpayKeySecret.trim() === "";
+
+if (isProduction && isPlaceholder) {
+  console.error("FATAL CONFIGURATION ERROR: Server cannot start in production without valid RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+  console.error("Missing or placeholder Razorpay keys detected in process.env.");
+  process.exit(1);
+}
 
 let razorpay = null;
-try {
-  razorpay = new Razorpay({
-    key_id: razorpayKeyId,
-    key_secret: razorpayKeySecret
-  });
-} catch (err) {
-  console.warn("Razorpay client initialization notice:", err.message);
+if (razorpayKeyId && razorpayKeySecret && !isPlaceholder) {
+  try {
+    razorpay = new Razorpay({
+      key_id: razorpayKeyId,
+      key_secret: razorpayKeySecret
+    });
+  } catch (err) {
+    console.warn("Razorpay client initialization notice:", err.message);
+  }
 }
+
 
 // Middleware
 app.use(cors());
@@ -245,10 +266,26 @@ app.post("/payment/verify", requireAuth, async (req, res) => {
       });
     });
 
-    // Send push notification if user has an FCM token registered
+    // Send Multi-Channel Notifications: Email (Brevo), SMS (TextBee), and Push (FCM)
     try {
       const userDoc = await db.collection("users").doc(userId).get();
-      const fcmToken = userDoc.data()?.fcmToken;
+      const userData = userDoc.exists ? userDoc.data() : {};
+      const customerEmail = userData.email || req.user.email;
+      const customerPhone = userData.phone || address?.phone;
+      const customerName = userData.name || req.user.name || "Customer";
+
+      // 1. Transactional Email & SMS
+      notifyOrderConfirmed({
+        email: customerEmail,
+        customerName,
+        phone: customerPhone,
+        orderId: orderRef.id,
+        total,
+        items: verifiedItems
+      }).catch(err => console.warn("Email/SMS notification dispatch note:", err.message));
+
+      // 2. FCM Push Notification
+      const fcmToken = userData.fcmToken;
       if (fcmToken) {
         await admin.messaging().send({
           token: fcmToken,
@@ -259,8 +296,8 @@ app.post("/payment/verify", requireAuth, async (req, res) => {
           data: { orderId: orderRef.id }
         });
       }
-    } catch (fcmErr) {
-      console.warn("FCM delivery note:", fcmErr.message);
+    } catch (notifErr) {
+      console.warn("Notification delivery note:", notifErr.message);
     }
 
     res.json({
@@ -420,7 +457,119 @@ app.post("/notifications/send", requireAuth, async (req, res) => {
     res.json({ success: true, messageId: response });
   } catch (err) {
     console.error("Error sending push notification:", err);
-    res.status(500).json({ error: err.message || "Failed to send notification" });
+  }
+});
+
+// 5b. Update Order Status & Dispatch Multi-Channel Notifications (Email, SMS, FCM)
+app.patch("/orders/:id/status", requireAuth, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ error: "Missing status field" });
+
+    const orderRef = db.collection("orders").doc(orderId);
+    const orderSnap = await orderRef.get();
+    if (!orderSnap.exists) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const orderData = orderSnap.data();
+
+    // Verify requester is admin or the order owner
+    const requesterDoc = await db.collection("users").doc(req.user.uid).get();
+    const isAdmin = requesterDoc.exists && requesterDoc.data()?.role === "Admin";
+    if (!isAdmin && req.user.uid !== orderData.userId) {
+      return res.status(403).json({ error: "Forbidden: Only administrators can update order status" });
+    }
+
+    await orderRef.update({
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Notify customer via Email, SMS, and FCM
+    try {
+      const userDoc = await db.collection("users").doc(orderData.userId).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+
+      notifyOrderStatusChanged({
+        email: userData.email,
+        customerName: userData.name,
+        phone: userData.phone,
+        orderId,
+        newStatus: status
+      }).catch(e => console.warn("Email/SMS status notification note:", e.message));
+
+      if (userData.fcmToken) {
+        admin.messaging().send({
+          token: userData.fcmToken,
+          notification: {
+            title: `Order Update: ${status.toUpperCase()} 📦`,
+            body: `Order #${orderId.slice(-6).toUpperCase()} is now ${status}.`
+          },
+          data: { orderId, status }
+        }).catch(e => console.warn("FCM status delivery note:", e.message));
+      }
+    } catch (e) {}
+
+    res.json({ success: true, orderId, status });
+  } catch (err) {
+    console.error("Error updating order status:", err);
+    res.status(500).json({ error: err.message || "Failed to update order status" });
+  }
+});
+
+// 5c. Update Service Request Status & Dispatch FCM Push Notifications
+app.patch("/services/:id/status", requireAuth, async (req, res) => {
+  try {
+    const serviceId = req.params.id;
+    const { status, notes } = req.body;
+    if (!status) return res.status(400).json({ error: "Missing status field" });
+
+    const serviceRef = db.collection("services").doc(serviceId);
+    const serviceSnap = await serviceRef.get();
+    if (!serviceSnap.exists) {
+      return res.status(404).json({ error: "Service ticket not found" });
+    }
+
+    const serviceData = serviceSnap.data();
+
+    // Verify requester is admin or the ticket owner
+    const requesterDoc = await db.collection("users").doc(req.user.uid).get();
+    const isAdmin = requesterDoc.exists && requesterDoc.data()?.role === "Admin";
+    if (!isAdmin && req.user.uid !== serviceData.userId) {
+      return res.status(403).json({ error: "Forbidden: Only administrators can update service ticket status" });
+    }
+
+    const updatePayload = {
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    if (notes !== undefined) updatePayload.notes = notes;
+
+    await serviceRef.update(updatePayload);
+
+    // Trigger FCM Push Notification
+    try {
+      const userDoc = await db.collection("users").doc(serviceData.userId).get();
+      const userData = userDoc.exists ? userDoc.data() : {};
+
+      if (userData.fcmToken) {
+        admin.messaging().send({
+          token: userData.fcmToken,
+          notification: {
+            title: `Service Request Update: ${status.toUpperCase()} 🛠️`,
+            body: `Your service ticket #${serviceId.slice(-6).toUpperCase()} is now ${status}.`
+          },
+          data: { serviceId, status }
+        }).catch(e => console.warn("FCM service delivery note:", e.message));
+      }
+    } catch (e) {}
+
+    res.json({ success: true, serviceId, status });
+  } catch (err) {
+    console.error("Error updating service status:", err);
+    res.status(500).json({ error: err.message || "Failed to update service status" });
   }
 });
 

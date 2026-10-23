@@ -343,5 +343,73 @@ Fulfills the 25-point AI Automation requirement (scheduled daily flow, AI-genera
 - Verified `automation/workflow.json` valid JSON syntax.
 
 **Next:**
-Final verification of submission packaging (`npm run package:submission`), git review, and documentation defense alignment.
+Phase 7 — Security Hardening, Multi-Channel Notifications (Brevo, TextBee, FCM), Mobile Dark Mode & Pinch-to-Zoom, and EAS Build Configuration.
+
+---
+
+## 2026-10-23 — Phase 7: Security Hardening, Multi-Channel Notifications, FCM, Dark Mode, and EAS
+
+**What was done:**
+1. **Security & Configuration Hardening**:
+   - Removed hardcoded Firebase `apiKey` fallbacks from `server/scripts/verifyPhase3.js` and `server/scripts/testServerSecurityAndIdempotency.js`. Both now read strictly from `process.env.FIREBASE_API_KEY` or `process.env.VITE_FIREBASE_API_KEY`.
+   - Updated `server/index.js` to immediately terminate startup (`process.exit(1)`) with a fatal error in production if `RAZORPAY_KEY_ID` or `RAZORPAY_KEY_SECRET` are missing or set to placeholder strings.
+2. **Multi-Channel Transactional Notifications (Email + SMS)**:
+   - Created `server/services/notificationService.js`:
+     - Email: Brevo REST API v3 (`https://api.brevo.com/v3/smtp/email`), 300 free emails/day forever without credit card.
+     - SMS: TextBee Android Gateway (`https://api.textbee.dev`), routing SMS through an Android phone SIM card at ₹0 cost, completely bypassing India's mandatory ₹5,900 TRAI DLT registration and template approval fees.
+   - Updated `.env.example` and created `server/.env.example` documenting all notification keys.
+   - Authored `docs/ALTERNATIVES.md` detailing the TRAI DLT compliance barriers for commercial SMS gateways (Twilio, Gupshup, Fast2SMS) and why TextBee + Brevo serve as the optimal zero-cost substitutes.
+   - Created and executed `server/scripts/testNotificationService.js`: **6/6 PASSED**.
+3. **FCM Token Registration & Status Push Notifications**:
+   - Created `mobile/src/services/notificationHelper.js` with `registerForPushNotificationsAsync()`.
+   - Integrated push registration in `mobile/src/hooks/useAuth.js` and `mobile/src/services/authService.js` to automatically persist the native device token to `users/{uid}.fcmToken` upon login.
+   - Created `mobile/google-services.json` and `mobile/eas.json`.
+   - Added `PATCH /services/:id/status` endpoint in `server/index.js` alongside `PATCH /orders/:id/status` and `POST /payment/verify`, triggering real-time FCM push notifications to the user's registered device.
+   - Created and executed `server/scripts/testFcmAndServicePush.js`: **9/9 PASSED**.
+4. **Mobile Dark Mode & Pinch-to-Zoom Viewer**:
+   - Created `mobile/src/hooks/useTheme.js` providing `ThemeProvider` and `useTheme` hook with persistent storage in `@react-native-async-storage/async-storage` (`@califnco_theme_mode`).
+   - Defined crisp light theme (`#f5f7fa` / `#0a2540`) and luxury obsidian navy dark theme (`#070d19` / `#0f172a` / `#00b4d8`).
+   - Integrated dark mode toggle switch with sun/moon icons in `mobile/src/screens/customer/ProfileScreen.js`.
+   - Wrapped `App.js` and `AppNavigator.js` with dynamic theme colors, tab styling, and reactive `StatusBar`.
+   - Implemented interactive fullscreen pinch-to-zoom product image viewer modal in `mobile/src/screens/customer/ProductDetailScreen.js` supporting up to 4x multi-touch zoom and double-tap inspection.
+5. **Credentials Migration**:
+   - Moved test account credentials table out of `docs/EXPLAINED.md` and centralized into `docs/SUBMISSION.md`.
+6. **EAS Build Configuration**:
+   - Created `mobile/eas.json` with `"buildType": "apk"` internal/preview profile.
+   - Documented exact EAS CLI commands to build the standalone Android APK in the cloud without Android Studio.
+
+**Files changed:**
+- server/index.js (updated)
+- server/services/notificationService.js (new)
+- server/scripts/verifyPhase3.js (updated)
+- server/scripts/testServerSecurityAndIdempotency.js (updated)
+- server/scripts/testNotificationService.js (new)
+- server/scripts/testFcmAndServicePush.js (new)
+- .env.example (updated)
+- server/.env.example (new)
+- mobile/google-services.json (new)
+- mobile/eas.json (new)
+- mobile/src/services/notificationHelper.js (new)
+- mobile/src/hooks/useAuth.js (updated)
+- mobile/src/services/authService.js (updated)
+- mobile/src/hooks/useTheme.js (new)
+- mobile/App.js (updated)
+- mobile/src/navigation/AppNavigator.js (updated)
+- mobile/src/screens/customer/ProductDetailScreen.js (updated)
+- mobile/src/screens/customer/ProfileScreen.js (updated)
+- docs/ALTERNATIVES.md (updated)
+- docs/EXPLAINED.md (updated)
+- docs/SUBMISSION.md (updated)
+- docs/PROGRESS_LOG.md (updated)
+
+**How tested:**
+- `node server/scripts/testServerSecurityAndIdempotency.js`: **25/25 PASSED** (token verification, 401/403 checks, idempotent verify, transactional stock decrement).
+- `node server/scripts/verifyPhase3.js`: **25/25 PASSED** (price recomputation, bulk pricing, Nominatim search).
+- `node server/scripts/testNotificationService.js`: **6/6 PASSED** (Brevo email & TextBee SMS formatting and dispatch).
+- `node server/scripts/testFcmAndServicePush.js`: **9/9 PASSED** (FCM token registration in Firestore, order status update push, service request update push).
+- Syntax validation on all modified mobile React Native files.
+
+**Errors:**
+None. All test suites passing cleanly with zero errors.
+
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
@@ -7,7 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useAuth } from "../hooks/useAuth";
 import { useCart } from "../hooks/useCart";
-import colors from "../constants/colors";
+import { useTheme } from "../hooks/useTheme";
 
 // Auth screens
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -34,11 +34,12 @@ const Tab = createBottomTabNavigator();
 
 function CartTabIcon({ color, size }) {
   const { count } = useCart();
+  const { theme } = useTheme();
   return (
     <View>
       <MaterialIcons name="shopping-cart" size={size} color={color} />
       {count > 0 && (
-        <View style={{ position: "absolute", top: -4, right: -6, backgroundColor: colors.accent, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ position: "absolute", top: -4, right: -6, backgroundColor: theme.accent, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}>
           <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>{count > 9 ? "9+" : count}</Text>
         </View>
       )}
@@ -47,14 +48,20 @@ function CartTabIcon({ color, size }) {
 }
 
 function CustomerTabs() {
+  const { theme, isDark } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { borderTopColor: colors.border, paddingBottom: 4 },
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: "#fff",
+        tabBarActiveTintColor: isDark ? theme.accent : theme.primary,
+        tabBarInactiveTintColor: theme.textMuted,
+        tabBarStyle: {
+          backgroundColor: theme.tabBarBg,
+          borderTopColor: theme.tabBarBorder,
+          paddingBottom: 4
+        },
+        headerStyle: { backgroundColor: theme.headerBg },
+        headerTintColor: theme.headerText,
         headerTitleStyle: { fontWeight: "700" }
       })}
     >
@@ -88,8 +95,10 @@ function CustomerTabs() {
 }
 
 function CatalogStack() {
+  const { theme } = useTheme();
+
   return (
-    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff", headerTitleStyle: { fontWeight: "700" } }}>
+    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.headerBg }, headerTintColor: theme.headerText, headerTitleStyle: { fontWeight: "700" } }}>
       <Stack.Screen name="CatalogList" component={CatalogScreen} options={{ title: "💧 Califnco" }} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={({ route }) => ({ title: route.params?.product?.name?.split(" ").slice(0, 3).join(" ") + "..." || "Product" })} />
     </Stack.Navigator>
@@ -97,8 +106,10 @@ function CatalogStack() {
 }
 
 function CartStack() {
+  const { theme } = useTheme();
+
   return (
-    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.primary }, headerTintColor: "#fff", headerTitleStyle: { fontWeight: "700" } }}>
+    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.headerBg }, headerTintColor: theme.headerText, headerTitleStyle: { fontWeight: "700" } }}>
       <Stack.Screen name="CartMain" component={CartScreen} options={{ title: "Cart" }} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: "Checkout" }} />
     </Stack.Navigator>
@@ -106,14 +117,19 @@ function CartStack() {
 }
 
 function DealerTabs() {
+  const { theme, isDark } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { borderTopColor: colors.border },
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: "#fff",
+        tabBarActiveTintColor: isDark ? theme.accent : theme.primary,
+        tabBarInactiveTintColor: theme.textMuted,
+        tabBarStyle: {
+          backgroundColor: theme.tabBarBg,
+          borderTopColor: theme.tabBarBorder
+        },
+        headerStyle: { backgroundColor: theme.headerBg },
+        headerTintColor: theme.headerText,
         headerTitleStyle: { fontWeight: "700" }
       }}
     >
@@ -147,11 +163,12 @@ function AuthStack() {
 
 export default function AppNavigator() {
   const { user, profile, loading } = useAuth();
+  const { theme, isDark } = useTheme();
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary }}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.primary }}>
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -168,8 +185,32 @@ export default function AppNavigator() {
     return <CustomerTabs />;
   }
 
+  const navigationTheme = isDark
+    ? {
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          background: theme.background,
+          card: theme.card,
+          text: theme.text,
+          border: theme.border,
+          primary: theme.primary
+        }
+      }
+    : {
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          background: theme.background,
+          card: theme.card,
+          text: theme.text,
+          border: theme.border,
+          primary: theme.primary
+        }
+      };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       {renderRoot()}
     </NavigationContainer>
   );

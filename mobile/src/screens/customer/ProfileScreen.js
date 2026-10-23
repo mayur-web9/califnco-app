@@ -1,16 +1,18 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, Alert, ActivityIndicator
+  StyleSheet, Alert, ActivityIndicator, Switch
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useAuth } from "../../hooks/useAuth";
+import { useTheme } from "../../hooks/useTheme";
 import { logout } from "../../services/authService";
-import colors from "../../constants/colors";
 
 export default function ProfileScreen() {
   const { profile, refreshProfile } = useAuth();
+  const { theme, isDark, toggleTheme } = useTheme();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -57,84 +59,153 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content}>
-      {/* Avatar */}
-      <View style={s.avatarWrap}>
-        <View style={s.avatar}>
+    <ScrollView style={[s.container, { backgroundColor: theme.background }]} contentContainerStyle={s.content}>
+      {/* Avatar Header */}
+      <View style={[s.avatarWrap, { backgroundColor: isDark ? theme.card : theme.primary }]}>
+        <View style={[s.avatar, { backgroundColor: theme.accent }]}>
           <Text style={s.avatarText}>{profile?.name?.charAt(0).toUpperCase() || "U"}</Text>
         </View>
-        <Text style={s.name}>{profile?.name}</Text>
-        <View style={s.roleBadge}>
-          <Text style={s.roleText}>{profile?.role}</Text>
+        <Text style={[s.name, { color: isDark ? theme.text : "#fff" }]}>{profile?.name}</Text>
+        <View style={[s.roleBadge, { backgroundColor: theme.chipBg }]}>
+          <Text style={[s.roleText, { color: theme.chipText }]}>{profile?.role}</Text>
         </View>
-        <Text style={s.email}>{profile?.email}</Text>
+        <Text style={[s.email, { color: isDark ? theme.textSecondary : "rgba(255,255,255,0.7)" }]}>
+          {profile?.email}
+        </Text>
       </View>
 
-      <View style={s.card}>
+      {/* Theme Preference Card (Dark Mode Toggle) */}
+      <View style={[s.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <View style={s.themeRow}>
+          <View style={s.themeInfo}>
+            <View style={s.themeTitleRow}>
+              <MaterialIcons
+                name={isDark ? "dark-mode" : "light-mode"}
+                size={22}
+                color={theme.accent}
+              />
+              <Text style={[s.cardTitle, { color: theme.text, marginLeft: 8 }]}>Dark Mode</Text>
+            </View>
+            <Text style={[s.themeSubtext, { color: theme.textSecondary }]}>
+              {isDark ? "Sleek Obsidian Navy Palette active" : "Crisp Day Blue Palette active"}
+            </Text>
+          </View>
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: "#cbd5e1", true: theme.accent }}
+            thumbColor={isDark ? "#ffffff" : "#f8fafc"}
+          />
+        </View>
+      </View>
+
+      {/* Profile Info Card */}
+      <View style={[s.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <View style={s.cardHeader}>
-          <Text style={s.cardTitle}>Profile Info</Text>
+          <Text style={[s.cardTitle, { color: theme.text }]}>Profile Info</Text>
           {!editing ? (
             <TouchableOpacity onPress={() => setEditing(true)}>
-              <Text style={s.editBtn}>Edit</Text>
+              <Text style={[s.editBtn, { color: theme.accent }]}>Edit</Text>
             </TouchableOpacity>
           ) : null}
         </View>
 
-        <Text style={s.label}>Full Name</Text>
-        <TextInput style={s.input} value={form.name} onChangeText={v => set("name", v)} editable={editing} />
+        <Text style={[s.label, { color: theme.textSecondary }]}>Full Name</Text>
+        <TextInput
+          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+          value={form.name}
+          onChangeText={v => set("name", v)}
+          editable={editing}
+        />
 
-        <Text style={s.label}>Phone</Text>
-        <TextInput style={s.input} value={form.phone} onChangeText={v => set("phone", v)} editable={editing} keyboardType="phone-pad" />
+        <Text style={[s.label, { color: theme.textSecondary }]}>Phone</Text>
+        <TextInput
+          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+          value={form.phone}
+          onChangeText={v => set("phone", v)}
+          editable={editing}
+          keyboardType="phone-pad"
+        />
 
-        <Text style={s.label}>Address</Text>
-        <TextInput style={s.input} value={form.line1} onChangeText={v => set("line1", v)} editable={editing} placeholder="Street / Flat no." placeholderTextColor={colors.textMuted} />
-        <TextInput style={s.input} value={form.city} onChangeText={v => set("city", v)} editable={editing} placeholder="City" placeholderTextColor={colors.textMuted} />
-        <TextInput style={s.input} value={form.state} onChangeText={v => set("state", v)} editable={editing} placeholder="State" placeholderTextColor={colors.textMuted} />
-        <TextInput style={s.input} value={form.pincode} onChangeText={v => set("pincode", v)} editable={editing} placeholder="Pincode" placeholderTextColor={colors.textMuted} keyboardType="number-pad" />
+        <Text style={[s.label, { color: theme.textSecondary }]}>Address</Text>
+        <TextInput
+          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+          value={form.line1}
+          onChangeText={v => set("line1", v)}
+          editable={editing}
+          placeholder="Street / Flat no."
+          placeholderTextColor={theme.textMuted}
+        />
+        <TextInput
+          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+          value={form.city}
+          onChangeText={v => set("city", v)}
+          editable={editing}
+          placeholder="City"
+          placeholderTextColor={theme.textMuted}
+        />
+        <TextInput
+          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+          value={form.state}
+          onChangeText={v => set("state", v)}
+          editable={editing}
+          placeholder="State"
+          placeholderTextColor={theme.textMuted}
+        />
+        <TextInput
+          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+          value={form.pincode}
+          onChangeText={v => set("pincode", v)}
+          editable={editing}
+          placeholder="Pincode"
+          placeholderTextColor={theme.textMuted}
+          keyboardType="number-pad"
+        />
 
         {editing && (
           <View style={s.editActions}>
-            <TouchableOpacity style={s.cancelBtn} onPress={() => setEditing(false)}>
-              <Text style={s.cancelText}>Cancel</Text>
+            <TouchableOpacity style={[s.cancelBtn, { borderColor: theme.border }]} onPress={() => setEditing(false)}>
+              <Text style={[s.cancelText, { color: theme.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={loading}>
+            <TouchableOpacity style={[s.saveBtn, { backgroundColor: theme.primary }]} onPress={handleSave} disabled={loading}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.saveText}>Save</Text>}
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
-        <Text style={s.logoutText}>Sign out</Text>
+      <TouchableOpacity style={[s.logoutBtn, { borderColor: theme.error + "66" }]} onPress={handleLogout}>
+        <Text style={[s.logoutText, { color: theme.error }]}>Sign out</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   content: { paddingBottom: 40 },
-  avatarWrap: { alignItems: "center", paddingVertical: 28, backgroundColor: colors.primary },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  avatarWrap: { alignItems: "center", paddingVertical: 28 },
+  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", marginBottom: 12 },
   avatarText: { fontSize: 34, fontWeight: "800", color: "#fff" },
-  name: { fontSize: 22, fontWeight: "700", color: "#fff", marginBottom: 6 },
-  roleBadge: { backgroundColor: colors.accent + "33", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 6 },
-  roleText: { color: colors.accent, fontSize: 13, fontWeight: "700" },
-  email: { fontSize: 13, color: "rgba(255,255,255,0.7)" },
-  card: { backgroundColor: colors.card, margin: 16, borderRadius: 14, padding: 20, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  name: { fontSize: 22, fontWeight: "700", marginBottom: 6 },
+  roleBadge: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 6 },
+  roleText: { fontSize: 13, fontWeight: "700" },
+  email: { fontSize: 13 },
+  card: { marginHorizontal: 16, marginTop: 16, borderRadius: 14, padding: 20, borderWidth: 1, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  themeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  themeInfo: { flex: 1, paddingRight: 12 },
+  themeTitleRow: { flexDirection: "row", alignItems: "center" },
+  themeSubtext: { fontSize: 12, marginTop: 4 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  cardTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
-  editBtn: { color: colors.accent, fontWeight: "700", fontSize: 14 },
-  label: { fontSize: 12, fontWeight: "600", color: colors.textSecondary, marginBottom: 5 },
-  input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-    padding: 12, fontSize: 14, color: colors.text, marginBottom: 12, backgroundColor: colors.background
-  },
+  cardTitle: { fontSize: 16, fontWeight: "700" },
+  editBtn: { fontWeight: "700", fontSize: 14 },
+  label: { fontSize: 12, fontWeight: "600", marginBottom: 5 },
+  input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 12 },
   editActions: { flexDirection: "row", gap: 12, marginTop: 4 },
-  cancelBtn: { flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: 10, padding: 12, alignItems: "center" },
-  cancelText: { fontWeight: "600", color: colors.textSecondary },
-  saveBtn: { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 12, alignItems: "center" },
+  cancelBtn: { flex: 1, borderWidth: 1.5, borderRadius: 10, padding: 12, alignItems: "center" },
+  cancelText: { fontWeight: "600" },
+  saveBtn: { flex: 1, borderRadius: 10, padding: 12, alignItems: "center" },
   saveText: { color: "#fff", fontWeight: "700" },
-  logoutBtn: { margin: 16, borderWidth: 1.5, borderColor: colors.error + "66", borderRadius: 12, padding: 14, alignItems: "center" },
-  logoutText: { color: colors.error, fontWeight: "700", fontSize: 15 }
+  logoutBtn: { margin: 16, borderWidth: 1.5, borderRadius: 12, padding: 14, alignItems: "center" },
+  logoutText: { fontWeight: "700", fontSize: 15 }
 });

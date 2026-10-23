@@ -10,11 +10,11 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const SERVER_URL = "http://localhost:3001";
 let spawnedServer = null;
 
-// Client auth for generating ID tokens
+// Client auth for generating ID tokens (reads strictly from environment)
 const clientApp = initializeApp({
-  apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyCvENhVhJc7CqRMNVWiZwFpG-R0c9vRqVU",
-  authDomain: "gen-lang-client-0022579334.firebaseapp.com",
-  projectId: "gen-lang-client-0022579334"
+  apiKey: process.env.FIREBASE_API_KEY || process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || `${process.env.FIREBASE_PROJECT_ID}.firebaseapp.com`,
+  projectId: process.env.FIREBASE_PROJECT_ID
 });
 const clientAuth = getAuth(clientApp);
 
@@ -86,6 +86,14 @@ async function runTests() {
   console.log("1. Testing Server Health Endpoint...");
   const health = await getJson("/health");
   assert(health.status === 200 && health.data.status === "ok", "GET /health returns status: ok");
+
+  // Ensure test inventory is replenished
+  await db.collection("products").doc("prod_purifier_01").set({
+    name: "PureFlow UV/UF Water Purifier",
+    price: 14999,
+    stock: 50,
+    category: "UV Purifiers"
+  }, { merge: true });
 
   // 2. Fetch test users and generate ID tokens
   const custCred = await signInWithEmailAndPassword(clientAuth, "customer@test.com", "Customer@123456");
