@@ -1,4 +1,4 @@
-﻿rules_version = '2';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -64,7 +64,12 @@ service cloud.firestore {
     // orders collection
     match /orders/{orderId} {
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Direct client creation must be pending, cannot self-assign paymentId, and wholesale restricted to approved dealers
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == "pending"
+        && (request.resource.data.paymentId == null || request.resource.data.paymentId == "")
+        && (request.resource.data.type == "retail" || (request.resource.data.type == "wholesale" && isApprovedDealer()));
       allow update: if isAdmin();
       allow delete: if false;
     }
@@ -72,7 +77,9 @@ service cloud.firestore {
     // services collection (service bookings)
     match /services/{serviceId} {
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == "pending";
       allow update: if isAdmin();
       allow delete: if false;
     }

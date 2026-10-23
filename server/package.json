@@ -8,12 +8,17 @@
     "dev": "node --watch index.js",
     "seed": "node scripts/seed.js",
     "verify:phase1": "node scripts/verifyPhase1.js",
-    "verify:phase2": "node scripts/verifyPhase2.js"
+    "verify:phase2": "node scripts/verifyPhase2.js",
+    "test:rules": "node scripts/testRulesSecurity.js",
+    "deploy:rules": "node scripts/deployRules.js",
+    "package:submission": "node scripts/packageSubmission.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
-    "firebase-admin": "^12.6.0"
+    "firebase": "^13.1.0",
+    "firebase-admin": "^12.6.0",
+    "razorpay": "^2.9.8"
   }
 }

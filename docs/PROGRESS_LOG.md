@@ -162,4 +162,56 @@ Phase 2 implements the primary user-facing retail customer flows on mobile. Havi
 - Composite index requirement on Firestore `(userId, createdAt)` was handled by implementing resilient fallback in `orderService.js` and `serviceBookingService.js` to ensure the app never crashes even before manual index deployment.
 
 **Next:**
-Phase 3 — Server backend integration: Razorpay order creation (`/payment/create-order`), Razorpay webhook/signature verification (`/payment/verify`), FCM push notification delivery, and OpenStreetMap/Nominatim address search.
+Security rules hardening & Phase 3 server integration.
+
+---
+
+## 2026-10-23 — Security Hardening: Rules Fortification, BOM Removal & Client-Side Security Test Suite
+
+**What was done:**
+- **Stripped Invisible BOM from `firestore.rules`**: Checked raw byte prefix (`239 187 191 114`) and stripped the 3-byte UTF-8 BOM, ensuring console copy-paste and CLI releases parse cleanly.
+- **Fortified `firestore.rules` for Orders and Service Bookings**:
+  - `orders/{orderId}`: Enforced that direct client creations must have `status == "pending"`, cannot self-assign a `paymentId` (`paymentId == null || paymentId == ""`), and cannot order `type == "wholesale"` unless the user is an approved dealer (`isApprovedDealer()`).
+  - `services/{serviceId}`: Enforced that direct client creations must have `status == "pending"` and `userId == request.auth.uid`.
+- **Created Live Automated Rules Deployment Tool**:
+  - Built `server/scripts/deployRules.js` using `firebase-admin`'s `securityRules().releaseFirestoreRulesetFromSource()` to deploy rulesets programmatically directly to the live Firebase project.
+- **Created Client-Side Security Test Suite (`server/scripts/testRulesSecurity.js`)**:
+  - Uses the genuine Firebase Client SDK (NOT admin superuser) to sign in as guest, `customer@test.com`, `dealer.pending@test.com`, and `dealer@test.com`.
+  - Asserts that unauthorized actions are genuinely rejected by Firestore Cloud with `PERMISSION_DENIED`:
+    - Guest blocked from wholesale collection and individual wholesale docs.
+    - Guest blocked from order creation.
+    - Customer blocked from wholesale catalog.
+    - Customer blocked from escalating role to "Admin" in `users/{uid}`.
+    - Customer blocked from approving their own `dealerStatus`.
+    - Customer blocked from forging order `status: "delivered"`.
+    - Customer blocked from pre-filling forged `paymentId`.
+    - Customer blocked from placing `wholesale` orders.
+    - Customer blocked from creating orders for other users.
+    - Customer allowed to update phone and create legitimate pending retail orders.
+    - Customer blocked from forging service booking `status: "completed"`.
+    - Pending Dealer blocked from reading wholesale or creating wholesale orders.
+    - Approved Dealer allowed to read wholesale and place wholesale orders.
+  - Result: 20/20 test assertions passed against live Firestore.
+- **Created Submission Sanitizer (`server/scripts/packageSubmission.js`)**:
+  - Automates generating clean Google Drive submission zips with strict exclusion of `*serviceAccountKey*.json`, `*adminsdk*.json`, `.env*`, `node_modules/`, and `.git/`.
+
+**Files changed:**
+- firestore.rules (updated)
+- server/package.json (updated)
+- server/scripts/deployRules.js (new)
+- server/scripts/testRulesSecurity.js (new)
+- server/scripts/packageSubmission.js (new)
+- docs/PROGRESS_LOG.md (updated)
+
+**Why:**
+`firebase-admin` bypasses security rules entirely. Real verification requires authenticating through the client SDK to prove that Firestore Cloud actually rejects forged statuses, forged payment IDs, unauthorized wholesale pricing reads, and unauthorized wholesale orders.
+
+**How tested:**
+- Executed `node server/scripts/deployRules.js`: deployed ruleset `d723e429-4481-489a-a48a-c116c3d78572` live to project `gen-lang-client-0022579334`.
+- Executed `node server/scripts/testRulesSecurity.js`: 20/20 security assertions passed.
+
+**Errors:**
+- Prior to deployment, 5 negative checks failed against the old permissive rules; after deploying fortified rules, all 20 passed.
+
+**Next:**
+Phase 3 — Server backend integration: Server-side recomputation of order totals, Razorpay order creation (`/payment/create-order`), Razorpay WebView checkout, server-side HMAC SHA256 signature verification (`/payment/verify`) before saving orders, FCM push notification delivery, and OpenStreetMap/Nominatim address search.

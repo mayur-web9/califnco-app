@@ -39,3 +39,9 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Archives & Temp
+*.zip
+*.tar
+*.gz
+temp_*
