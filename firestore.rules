@@ -1,0 +1,85 @@
+﻿rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUser().role == "Admin";
+    }
+
+    function isApprovedDealer() {
+      return isSignedIn()
+        && getUser().role == "Dealer"
+        && getUser().dealerStatus == "approved";
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // users collection
+    match /users/{uid} {
+      // User can read their own doc; Admin can read all
+      allow read: if isOwner(uid) || isAdmin();
+
+      // New user can register as Customer or Dealer (starts pending)
+      allow create: if isOwner(uid)
+        && request.resource.data.role in ["Customer", "Dealer"]
+        && (
+          request.resource.data.role == "Customer"
+          ? (request.resource.data.dealerStatus == null || request.resource.data.dealerStatus == "")
+          : request.resource.data.dealerStatus == "pending"
+        );
+
+      // User can update their profile fields (name, phone, address, fcmToken)
+      // but CANNOT modify their own role or dealerStatus. Only Admin can update role/dealerStatus.
+      allow update: if isAdmin()
+        || (isOwner(uid)
+          && !("role" in request.resource.data.diff(resource.data).affectedKeys())
+          && !("dealerStatus" in request.resource.data.diff(resource.data).affectedKeys()));
+
+      allow delete: if false;
+    }
+
+    // products collection — public read, admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // wholesale collection — strictly restricted to approved dealers & admins
+    match /wholesale/{productId} {
+      allow read: if isApprovedDealer() || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // orders collection
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // services collection (service bookings)
+    match /services/{serviceId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // automation state — client access disallowed (accessed via Admin SDK)
+    match /automation/{docId} {
+      allow read, write: if false;
+    }
+  }
+}
