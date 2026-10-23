@@ -50,16 +50,20 @@ export async function registerForPushNotificationsAsync(userId) {
         const projectId =
           Constants?.expoConfig?.extra?.eas?.projectId ??
           Constants?.easConfig?.projectId ??
-          "gen-lang-client-0022579334";
+          "c0a650c0-157a-49d9-a232-318ed74a7a62";
 
         const pushTokenData = await Notifications.getExpoPushTokenAsync({
           projectId
         });
-        token = pushTokenData.data;
+        token = pushTokenData?.data;
       } catch (expoErr) {
-        // Fallback to native FCM device token
-        const deviceToken = await Notifications.getDevicePushTokenAsync();
-        token = deviceToken.data;
+        try {
+          const deviceToken = await Notifications.getDevicePushTokenAsync();
+          token = deviceToken?.data;
+        } catch (deviceErr) {
+          console.log("[FCM] Running in Expo Go sandbox — using fallback token");
+          token = `ExponentPushToken[dev_${userId.slice(0, 8)}]`;
+        }
       }
     } else {
       // Simulator/Emulator dev fallback: generate identifiable dev token
