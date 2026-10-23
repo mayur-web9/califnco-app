@@ -7,6 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useCart } from "../../hooks/useCart";
 import { useTheme } from "../../hooks/useTheme";
 import { formatPrice } from "../../utils/formatPrice";
+import { getProductImageSource } from "../../constants/productImages";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -34,7 +35,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           onPress={() => setZoomVisible(true)}
           style={[s.imageWrapper, { backgroundColor: theme.cardElevated }]}
         >
-          <Image source={{ uri: product.imageUrl }} style={s.image} resizeMode="contain" />
+          <Image source={getProductImageSource(product)} style={s.image} resizeMode="contain" />
           <View style={s.zoomHintBadge}>
             <MaterialIcons name="zoom-in" size={16} color="#fff" />
             <Text style={s.zoomHintText}>Tap to Zoom</Text>
@@ -122,7 +123,7 @@ export default function ProductDetailScreen({ route, navigation }) {
             bouncesZoom={true}
           >
             <Image
-              source={{ uri: product.imageUrl }}
+              source={getProductImageSource(product)}
               style={s.fullZoomImage}
               resizeMode="contain"
             />

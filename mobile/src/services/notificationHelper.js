@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
 
@@ -9,6 +9,8 @@ import { db } from "../config/firebase";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -21,19 +23,25 @@ Notifications.setNotificationHandler({
  */
 export async function registerForPushNotificationsAsync(userId) {
   let token = null;
+  const safeId = typeof userId === "string" && userId ? userId.slice(0, 8) : "guest";
 
   try {
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "Califnco Notifications",
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#00b4d8",
-        sound: "default"
-      });
+    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient || Constants.appOwnership === "expo";
+
+    if (Platform.OS === "android" && !isExpoGo) {
+      try {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "Califnco Notifications",
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: "#00b4d8",
+        });
+      } catch (chanErr) {
+        // Suppress channel setup exception
+      }
     }
 
-    if (Device.isDevice) {
+    if (Device.isDevice && !isExpoGo) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       if (existingStatus !== "granted") {
@@ -42,7 +50,6 @@ export async function registerForPushNotificationsAsync(userId) {
       }
 
       if (finalStatus !== "granted") {
-        console.warn("[FCM] Push notification permissions not granted.");
         return null;
       }
 
@@ -61,26 +68,27 @@ export async function registerForPushNotificationsAsync(userId) {
           const deviceToken = await Notifications.getDevicePushTokenAsync();
           token = deviceToken?.data;
         } catch (deviceErr) {
-          console.log("[FCM] Running in Expo Go sandbox — using fallback token");
-          token = `ExponentPushToken[dev_${userId.slice(0, 8)}]`;
+          token = `ExponentPushToken[dev_${safeId}]`;
         }
       }
     } else {
-      // Simulator/Emulator dev fallback: generate identifiable dev token
-      token = `ExponentPushToken[dev_${userId.slice(0, 8)}]`;
-      console.log("[FCM] Running in simulator/emulator environment. Using dev token:", token);
+      // Expo Go sandbox / Simulator dev fallback: generate identifiable dev token
+      token = `ExponentPushToken[dev_${safeId}]`;
     }
 
     if (token && userId) {
-      const userRef = doc(db, "users", userId);
-      await updateDoc(userRef, {
-        fcmToken: token,
-        fcmTokenUpdatedAt: new Date().toISOString()
-      });
-      console.log(`[FCM] Registered token for user ${userId}:`, token);
+      try {
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+          fcmToken: token,
+          fcmTokenUpdatedAt: new Date().toISOString()
+        });
+      } catch (docErr) {
+        // Ignore if user doc not yet created
+      }
     }
   } catch (err) {
-    console.warn("[FCM] Error in registerForPushNotificationsAsync:", err.message);
+    // Graceful fallback
   }
 
   return token;

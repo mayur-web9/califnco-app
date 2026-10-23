@@ -13,7 +13,7 @@ const products = [
     stock: 45,
     rating: 4.8,
     reviewCount: 142,
-    imageUrl: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_02",
@@ -26,7 +26,7 @@ const products = [
     stock: 60,
     rating: 4.6,
     reviewCount: 98,
-    imageUrl: "https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_03",
@@ -39,7 +39,7 @@ const products = [
     stock: 28,
     rating: 4.9,
     reviewCount: 74,
-    imageUrl: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_undersink.jpg"
   },
   {
     id: "prod_purifier_04",
@@ -52,7 +52,7 @@ const products = [
     stock: 32,
     rating: 4.9,
     reviewCount: 215,
-    imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_05",
@@ -65,7 +65,7 @@ const products = [
     stock: 15,
     rating: 4.7,
     reviewCount: 46,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_undersink.jpg"
   },
   {
     id: "prod_purifier_06",
@@ -78,7 +78,7 @@ const products = [
     stock: 85,
     rating: 4.4,
     reviewCount: 180,
-    imageUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_07",
@@ -91,7 +91,7 @@ const products = [
     stock: 40,
     rating: 4.8,
     reviewCount: 110,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_08",
@@ -104,7 +104,7 @@ const products = [
     stock: 22,
     rating: 4.9,
     reviewCount: 88,
-    imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_09",
@@ -117,7 +117,7 @@ const products = [
     stock: 35,
     rating: 4.6,
     reviewCount: 65,
-    imageUrl: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_10",
@@ -130,7 +130,7 @@ const products = [
     stock: 18,
     rating: 4.7,
     reviewCount: 39,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_undersink.jpg"
   },
   {
     id: "prod_purifier_11",
@@ -143,7 +143,7 @@ const products = [
     stock: 50,
     rating: 4.7,
     reviewCount: 130,
-    imageUrl: "https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
   {
     id: "prod_purifier_12",
@@ -156,7 +156,7 @@ const products = [
     stock: 29,
     rating: 4.8,
     reviewCount: 92,
-    imageUrl: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/purifier_wall.jpg"
   },
 
   // --- Category: Dispenser (10 items) ---
@@ -171,7 +171,7 @@ const products = [
     stock: 30,
     rating: 4.7,
     reviewCount: 85,
-    imageUrl: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_02",
@@ -184,7 +184,7 @@ const products = [
     stock: 45,
     rating: 4.5,
     reviewCount: 62,
-    imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_03",
@@ -197,7 +197,7 @@ const products = [
     stock: 14,
     rating: 4.9,
     reviewCount: 41,
-    imageUrl: "https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_04",
@@ -210,7 +210,7 @@ const products = [
     stock: 25,
     rating: 4.8,
     reviewCount: 53,
-    imageUrl: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_05",
@@ -223,7 +223,7 @@ const products = [
     stock: 70,
     rating: 4.6,
     reviewCount: 118,
-    imageUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_06",
@@ -236,7 +236,7 @@ const products = [
     stock: 12,
     rating: 4.9,
     reviewCount: 37,
-    imageUrl: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_07",
@@ -249,7 +249,7 @@ const products = [
     stock: 20,
     rating: 4.7,
     reviewCount: 49,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_08",
@@ -262,7 +262,7 @@ const products = [
     stock: 38,
     rating: 4.5,
     reviewCount: 72,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_09",
@@ -275,7 +275,7 @@ const products = [
     stock: 33,
     rating: 4.6,
     reviewCount: 64,
-    imageUrl: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
   {
     id: "prod_dispenser_10",
@@ -288,7 +288,7 @@ const products = [
     stock: 10,
     rating: 4.8,
     reviewCount: 29,
-    imageUrl: "https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/dispenser_cooler.jpg"
   },
 
   // --- Category: Pump (10 items) ---
@@ -303,7 +303,7 @@ const products = [
     stock: 120,
     rating: 4.7,
     reviewCount: 310,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_02",
@@ -316,7 +316,7 @@ const products = [
     stock: 95,
     rating: 4.8,
     reviewCount: 204,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_03",
@@ -329,7 +329,7 @@ const products = [
     stock: 65,
     rating: 4.9,
     reviewCount: 88,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_04",
@@ -342,7 +342,7 @@ const products = [
     stock: 75,
     rating: 4.6,
     reviewCount: 145,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_05",
@@ -355,7 +355,7 @@ const products = [
     stock: 80,
     rating: 4.8,
     reviewCount: 167,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_06",
@@ -368,7 +368,7 @@ const products = [
     stock: 30,
     rating: 4.9,
     reviewCount: 42,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_07",
@@ -381,7 +381,7 @@ const products = [
     stock: 40,
     rating: 4.7,
     reviewCount: 56,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_08",
@@ -394,7 +394,7 @@ const products = [
     stock: 60,
     rating: 4.6,
     reviewCount: 91,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_09",
@@ -407,7 +407,7 @@ const products = [
     stock: 140,
     rating: 4.4,
     reviewCount: 220,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
   {
     id: "prod_pump_10",
@@ -420,7 +420,7 @@ const products = [
     stock: 35,
     rating: 4.8,
     reviewCount: 63,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/pump_booster.jpg"
   },
 
   // --- Category: Filter (10 items) ---
@@ -435,7 +435,7 @@ const products = [
     stock: 400,
     rating: 4.8,
     reviewCount: 520,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_cartridge.jpg"
   },
   {
     id: "prod_filter_02",
@@ -448,7 +448,7 @@ const products = [
     stock: 250,
     rating: 4.7,
     reviewCount: 310,
-    imageUrl: "https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_cartridge.jpg"
   },
   {
     id: "prod_filter_03",
@@ -461,7 +461,7 @@ const products = [
     stock: 210,
     rating: 4.8,
     reviewCount: 275,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_cartridge.jpg"
   },
   {
     id: "prod_filter_04",
@@ -474,7 +474,7 @@ const products = [
     stock: 180,
     rating: 4.9,
     reviewCount: 412,
-    imageUrl: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_membrane.jpg"
   },
   {
     id: "prod_filter_05",
@@ -487,7 +487,7 @@ const products = [
     stock: 320,
     rating: 4.8,
     reviewCount: 198,
-    imageUrl: "https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_cartridge.jpg"
   },
   {
     id: "prod_filter_06",
@@ -500,7 +500,7 @@ const products = [
     stock: 160,
     rating: 4.9,
     reviewCount: 240,
-    imageUrl: "https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_cartridge.jpg"
   },
   {
     id: "prod_filter_07",
@@ -513,7 +513,7 @@ const products = [
     stock: 190,
     rating: 4.6,
     reviewCount: 155,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_membrane.jpg"
   },
   {
     id: "prod_filter_08",
@@ -526,7 +526,7 @@ const products = [
     stock: 140,
     rating: 4.5,
     reviewCount: 88,
-    imageUrl: "https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_cartridge.jpg"
   },
   {
     id: "prod_filter_09",
@@ -539,7 +539,7 @@ const products = [
     stock: 110,
     rating: 4.7,
     reviewCount: 76,
-    imageUrl: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_cartridge.jpg"
   },
   {
     id: "prod_filter_10",
@@ -552,7 +552,7 @@ const products = [
     stock: 130,
     rating: 4.8,
     reviewCount: 185,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_membrane.jpg"
   },
 
   // --- Category: Spare (10 items) ---
@@ -567,7 +567,7 @@ const products = [
     stock: 300,
     rating: 4.7,
     reviewCount: 160,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_valve.jpg"
   },
   {
     id: "prod_spare_02",
@@ -580,7 +580,7 @@ const products = [
     stock: 220,
     rating: 4.8,
     reviewCount: 290,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_valve.jpg"
   },
   {
     id: "prod_spare_03",
@@ -593,7 +593,7 @@ const products = [
     stock: 280,
     rating: 4.6,
     reviewCount: 140,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_valve.jpg"
   },
   {
     id: "prod_spare_04",
@@ -606,7 +606,7 @@ const products = [
     stock: 270,
     rating: 4.6,
     reviewCount: 155,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_valve.jpg"
   },
   {
     id: "prod_spare_05",
@@ -619,7 +619,7 @@ const products = [
     stock: 500,
     rating: 4.8,
     reviewCount: 380,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_fittings.jpg"
   },
   {
     id: "prod_spare_06",
@@ -632,7 +632,7 @@ const products = [
     stock: 130,
     rating: 4.7,
     reviewCount: 175,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_housing.jpg"
   },
   {
     id: "prod_spare_07",
@@ -645,7 +645,7 @@ const products = [
     stock: 190,
     rating: 4.9,
     reviewCount: 210,
-    imageUrl: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_uv.jpg"
   },
   {
     id: "prod_spare_08",
@@ -658,7 +658,7 @@ const products = [
     stock: 260,
     rating: 4.8,
     reviewCount: 430,
-    imageUrl: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_tds.jpg"
   },
   {
     id: "prod_spare_09",
@@ -671,7 +671,7 @@ const products = [
     stock: 350,
     rating: 4.7,
     reviewCount: 220,
-    imageUrl: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/spare_fittings.jpg"
   },
   {
     id: "prod_spare_10",
@@ -684,7 +684,7 @@ const products = [
     stock: 170,
     rating: 4.8,
     reviewCount: 165,
-    imageUrl: "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?w=600&auto=format&fit=crop&q=80"
+    imageUrl: "https://califnco-app.onrender.com/public/products/filter_membrane.jpg"
   }
 ];
 

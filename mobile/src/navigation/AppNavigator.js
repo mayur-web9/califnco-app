@@ -100,7 +100,7 @@ function CatalogStack() {
   return (
     <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.headerBg }, headerTintColor: theme.headerText, headerTitleStyle: { fontWeight: "700" } }}>
       <Stack.Screen name="CatalogList" component={CatalogScreen} options={{ title: "💧 Califnco" }} />
-      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={({ route }) => ({ title: route.params?.product?.name?.split(" ").slice(0, 3).join(" ") + "..." || "Product" })} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: "Product Details" }} />
     </Stack.Navigator>
   );
 }

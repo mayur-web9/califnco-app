@@ -124,23 +124,26 @@ export default function DealerCatalogScreen({ navigation }) {
       </View>
 
       {/* Category filter */}
-      <FlatList
-        data={CATEGORIES}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={i => i.id}
-        contentContainerStyle={s.catList}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[s.catChip, activeCategory === item.id && s.catChipActive]}
-            onPress={() => setActiveCategory(item.id)}
-          >
-            <Text style={[s.catText, activeCategory === item.id && s.catTextActive]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={s.catContainer}>
+        <FlatList
+          data={CATEGORIES}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={i => i.id}
+          contentContainerStyle={s.catList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[s.catChip, activeCategory === item.id && s.catChipActive]}
+              onPress={() => setActiveCategory(item.id)}
+              activeOpacity={0.75}
+            >
+              <Text style={[s.catText, activeCategory === item.id && s.catTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
 
       {/* Product count */}
       <Text style={s.countText}>
@@ -272,15 +275,53 @@ const s = StyleSheet.create({
   searchIcon: { fontSize: 16, marginRight: 8 },
   search: { flex: 1, paddingVertical: 10, fontSize: 15, color: colors.text },
   clearIcon: { fontSize: 16, color: colors.textMuted, paddingLeft: 8 },
-  catList: { paddingHorizontal: 14, paddingBottom: 6, gap: 8 },
-  catChip: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18,
-    backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border
+  catContainer: {
+    height: 46,
+    marginBottom: 6,
   },
-  catChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  catText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary },
-  catTextActive: { color: colors.textOnPrimary },
-  countText: { paddingHorizontal: 14, paddingBottom: 4, fontSize: 12, color: colors.textMuted },
+  catList: {
+    paddingHorizontal: 14,
+    alignItems: "center",
+    gap: 8,
+  },
+  catChip: {
+    paddingHorizontal: 16,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 18,
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  catChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    elevation: 2,
+  },
+  catText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
+  catTextActive: {
+    color: colors.textOnPrimary,
+  },
+  countText: {
+    paddingHorizontal: 14,
+    paddingTop: 2,
+    paddingBottom: 6,
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.textMuted
+  },
   grid: { paddingHorizontal: 8, paddingBottom: 24 },
   row: { justifyContent: "space-between" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },

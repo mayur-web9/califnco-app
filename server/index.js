@@ -48,6 +48,7 @@ if (razorpayKeyId && razorpayKeySecret && !isPlaceholder) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 // Auth Middleware: Verify Firebase ID Token on protected routes
 async function requireAuth(req, res, next) {
