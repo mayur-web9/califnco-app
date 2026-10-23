@@ -71,7 +71,28 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// 1. Health check endpoint (also used by clients to warm up sleeping Render instances)
+// 1. Root & Health Check Endpoints
+app.get("/", (req, res) => {
+  res.json({
+    name: "Califnco Water Systems API",
+    status: "active",
+    environment: process.env.NODE_ENV || "development",
+    service: "califnco-server",
+    uptime: Math.round(process.uptime()),
+    healthCheck: "/health",
+    endpoints: {
+      health: "GET /health",
+      createPaymentOrder: "POST /payment/create-order",
+      verifyPayment: "POST /payment/verify",
+      dealerBulkOrders: "POST /orders/bulk",
+      updateOrderStatus: "PATCH /orders/:id/status",
+      updateServiceStatus: "PATCH /services/:id/status",
+      addressSearch: "GET /address/search?q={query}",
+      automationNextProduct: "GET /automation/next-product"
+    }
+  });
+});
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",

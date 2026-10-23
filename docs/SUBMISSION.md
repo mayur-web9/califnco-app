@@ -14,7 +14,7 @@
 | :--- | :--- | :--- |
 | **GitHub Repository** | `https://github.com/mayur-web9/califnco-app` | Verified (`main` branch) |
 | **Admin Web Portal** | `admin-web/` (Vercel-ready with Vite) | Verified & Tested |
-| **Backend REST API** | `server/` (Render/Railway-ready Node.js API) | Verified & Tested (Port 3001) |
+| **Backend REST API** | `https://califnco-app.onrender.com` (Health: `https://califnco-app.onrender.com/health`) | **LIVE on Render** 🎉 |
 | **Mobile Application** | `mobile/` (React Native Expo 51 + EAS Build) | Tested & Validated |
 | **n8n Automation Workflow** | `automation/workflow.json` | Tested (Groq + FLUX.1-schnell) |
 | **Clean ZIP Submission** | `califnco-submission-clean.zip` | Sanitized (Zero secrets/keys) |
