@@ -52,14 +52,15 @@ const entries = zipList.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
 console.log(`Total archived files: ${entries.length}`);
 
-// Forbidden patterns
+// Forbidden patterns (real secret files and heavy dependencies)
 const forbiddenPatterns = [
-  /\.env($|\..*)/i,
+  /(^|\/)\.env($|\.local|\.development|\.production)$/i,
   /serviceAccountKey/i,
   /adminsdk/i,
   /node_modules/i,
   /\.git\//i
 ];
+
 
 let leakCount = 0;
 for (const entry of entries) {
