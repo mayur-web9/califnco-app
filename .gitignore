@@ -1,0 +1,39 @@
+﻿# Environment files — never commit secrets
+.env
+.env.local
+.env.development
+.env.production
+*.env
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Expo / React Native
+mobile/.expo/
+mobile/dist/
+mobile/android/
+mobile/ios/
+*.apk
+*.ipa
+
+# Vite / React build
+admin-web/dist/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Service account keys — treat as secrets
+*serviceAccountKey*.json
+*service-account*.json
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
