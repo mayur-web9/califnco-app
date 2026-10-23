@@ -1,4 +1,4 @@
-﻿# Califnco — Round 1 Technical Assignment Specification
+# Califnco — Round 1 Technical Assignment Specification
 
 **Deadline:** 25 October 2026, 11:59 PM IST
 **Candidate:** MERN Developer

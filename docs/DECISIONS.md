@@ -1,4 +1,4 @@
-﻿# Decisions
+# Decisions
 
 This file records architectural decisions: the Firestore schema, security rules, folder layout, and key design choices. It is the source of truth for the project structure.
 

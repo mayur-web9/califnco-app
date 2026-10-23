@@ -1,4 +1,4 @@
-﻿# Submission
+# Submission
 
 **Candidate:** (your name)
 **Deadline:** 25 October 2026, 11:59 PM IST

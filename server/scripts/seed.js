@@ -1,4 +1,4 @@
-﻿const { admin, db, auth } = require("../firebaseAdmin");
+const { admin, db, auth } = require("../firebaseAdmin");
 
 const products = [
   // --- Category: Purifier (12 items) ---

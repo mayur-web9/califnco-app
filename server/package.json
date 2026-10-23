@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "califnco-server",
   "version": "1.0.0",
   "description": "Backend service for Razorpay, FCM, notifications, and seeding",
@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "verify:phase1": "node scripts/verifyPhase1.js",
+    "verify:phase2": "node scripts/verifyPhase2.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

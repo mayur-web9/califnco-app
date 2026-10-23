@@ -1,4 +1,4 @@
-﻿# Alternatives — Tool Substitutions and Reasons
+# Alternatives — Tool Substitutions and Reasons
 
 This file records every case where I switched from a suggested tool to a substitute, why I switched, and which zero-cost tool I chose instead.
 

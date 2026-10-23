@@ -1,4 +1,4 @@
-﻿# Automation — Daily Instagram Post
+# Automation — Daily Instagram Post
 
 This folder contains the n8n workflow that posts one product per day to Instagram with an AI-generated image and caption.
 

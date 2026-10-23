@@ -1,4 +1,4 @@
-﻿# Explained — How It Works (Plain English)
+# Explained — How It Works (Plain English)
 
 I wrote this so I can explain every part of this project in a review without stumbling. Each section covers what the feature does, how data flows, which files matter, why I made this design choice, and the questions I expect to be asked.
 
@@ -6,7 +6,50 @@ I wrote this so I can explain every part of this project in a review without stu
 
 ## Module: Mobile App
 
-_To be written after Phase 2._
+### What it does
+The mobile application is built with Expo React Native (SDK 51). It provides a full-featured customer shopping experience and a dedicated wholesale portal for verified dealers:
+1. **Catalog & Search**: Customers can browse water purifiers, dispensers, pumps, filters, and spare parts. Filter by category pill or search via real-time keyword query.
+2. **Product Details**: Shows high-resolution product imagery, star ratings, review counts, stock availability indicators, quantity controls, and one-touch "Add to Cart" or "Buy Now".
+3. **Cart & Checkout**: Global reactive shopping cart with quantity increment/decrement, line-item totals, and complete delivery address validation (with 6-digit Indian PIN code check).
+4. **Order Tracking**: Real-time listing of customer orders with formatted currency (INR), date timestamps, item summaries, and status color badges (`pending`, `confirmed`, `dispatched`, `delivered`, `cancelled`).
+5. **Service Booking**: Dual-tab interface allowing customers to request technician home visits (contact phone, address, and issue description) and track the status of past service requests.
+6. **Profile Management**: Displays user details, role badge, and allows editing saved delivery address information.
+7. **Role-Based Experience**: Dynamically transitions UI depending on whether the user is a Customer, a Pending Dealer (shows approval hold screen), or an Approved Dealer (shows wholesale catalog with minimum order quantities).
+
+### How data flows
+1. **Authentication Flow**:
+   - `AuthProvider` wraps the root application and listens to Firebase `onAuthStateChanged`.
+   - Once Firebase Auth resolves, `getUserProfile(uid)` fetches the user's document from Firestore (`users/{uid}`) to determine their role and `dealerStatus`.
+   - `AppNavigator` uses this state to switch between `AuthStack`, `CustomerTabs`, `DealerTabs`, or `PendingApprovalScreen`.
+2. **Catalog Flow**:
+   - `CatalogScreen` calls `getProducts()` which queries `products` ordered by name.
+   - Category filtering and search queries run reactively via `useMemo` for instant client-side responsiveness.
+3. **Checkout & Order Flow**:
+   - When the user taps checkout, `CheckoutScreen` validates the address and requests a payment order from the backend server (`POST /payment/create-order`).
+   - Upon payment confirmation (simulated in test mode or via Razorpay SDK), `createOrder()` writes an order document to Firestore `orders` with `type: "retail"`, `userId: profile.uid`, line items, and timestamp.
+   - The cart is emptied, and the user is redirected to the `OrdersScreen`.
+
+### Files that matter
+- `mobile/App.js`: Root entry wrapping providers (`SafeAreaProvider`, `AuthProvider`, `CartProvider`, `StatusBar`, `AppNavigator`).
+- `mobile/src/navigation/AppNavigator.js`: Role-based tab and stack navigation structure.
+- `mobile/src/hooks/useCart.js`: Lightweight React Context for cart management.
+- `mobile/src/hooks/useAuth.js`: Context providing current user and Firestore profile state.
+- `mobile/src/screens/customer/`: Customer-facing screens (`CatalogScreen`, `ProductDetailScreen`, `CartScreen`, `CheckoutScreen`, `OrdersScreen`, `ServiceBookingScreen`, `ProfileScreen`).
+- `mobile/src/screens/dealer/`: B2B wholesale dealer screens (`DealerCatalogScreen`, `DealerOrdersScreen`).
+- `mobile/src/screens/shared/PendingApprovalScreen.js`: Screen informing pending dealers of review status.
+- `mobile/src/services/`: Direct Firestore client services (`productService`, `orderService`, `serviceBookingService`, `authService`).
+
+### Review Questions & Answers
+**Q1: Why did you choose React Context over Redux or Zustand for the cart?**  
+*Answer:* The cart state only requires storing a simple array of selected items, quantities, and calculating the sum total. React Context (`useCart`) provides this with zero additional dependencies, clean readable code, and no boilerplate actions or reducers.
+
+**Q2: How does the app prevent unapproved dealers from seeing wholesale prices?**  
+*Answer:* There is a two-layer defense:
+1. **UI Layer**: `AppNavigator` checks `profile.role === "Dealer" && profile.dealerStatus === "approved"`. If `dealerStatus` is `"pending"`, the user is locked to `PendingApprovalScreen`.
+2. **Database Layer (Firestore Rules)**: Even if someone modified the app code, Firestore security rules strictly reject any `wholesale` collection read unless `request.auth` has an approved dealer or admin role in Firestore.
+
+**Q3: How is currency formatting and date formatting handled?**  
+*Answer:* Centralized in `mobile/src/utils/formatPrice.js` using `toLocaleString('en-IN')` to display standard Indian Rupee notation (`Rs. 14,999`) and readable date strings (`23 Oct 2026, 01:15 pm`).
 
 ---
 

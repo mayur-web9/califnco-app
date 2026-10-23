@@ -1,4 +1,4 @@
-﻿const admin = require("firebase-admin");
+const admin = require("firebase-admin");
 const path = require("path");
 require("dotenv").config();
 

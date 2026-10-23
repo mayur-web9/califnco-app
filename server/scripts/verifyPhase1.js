@@ -1,4 +1,4 @@
-﻿const { db, auth } = require("../firebaseAdmin");
+const { db, auth } = require("../firebaseAdmin");
 
 async function verify() {
   console.log("=== Phase 1 Health Check ===");
