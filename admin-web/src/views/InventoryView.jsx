@@ -200,16 +200,16 @@ export default function InventoryView({ products, onRefresh }) {
       {/* Products Table */}
       <div className="glass-card" style={{ padding: 0 }}>
         <div className="table-container">
-          <table>
+          <table style={{ tableLayout: "fixed", width: "100%" }}>
             <thead>
               <tr>
-                <th style={{ width: "60px" }}>Item</th>
-                <th>Product Details</th>
-                <th>Category</th>
-                <th>Retail Price</th>
-                <th>Stock Level</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th style={{ width: "68px" }}>Item</th>
+                <th style={{ width: "32%" }}>Product Details</th>
+                <th style={{ width: "12%" }}>Category</th>
+                <th style={{ width: "16%" }}>Retail Price</th>
+                <th style={{ width: "17%" }}>Stock Level</th>
+                <th style={{ width: "12%" }}>Status</th>
+                <th style={{ width: "110px", textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
