@@ -56,11 +56,11 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"llama-3.1-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an elite copywriter and social media director for Califnco, a high-end water purifier and copper-alkaline RO brand in India. Generate an irresistible Instagram caption for today's featured product. Structure the caption with:\\n1. Catchy attention-grabbing hook\\n2. Three clear bullet points on health benefits (TDS reduction, alkaline pH, mineral boost)\\n3. Retail price with a limited-time festive discount\\n4. Clear call-to-action to download Califnco Mobile App for free doorstep installation\\n5. 8-10 trending water quality and lifestyle hashtags.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Product Name: {{ $json.product.name }}\\nCategory: {{ $json.product.category }}\\nRetail Price: Rs. {{ $json.product.price }}\\nCatalog Description: {{ $json.product.description }}\"\n    }\n  ],\n  \"temperature\": 0.7\n}",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an elite copywriter and social media director for Califnco, a high-end water purifier and copper-alkaline RO brand in India. Generate an irresistible Instagram caption for today's featured product. Structure the caption with:\\n1. Catchy attention-grabbing hook\\n2. Three clear bullet points on health benefits (TDS reduction, alkaline pH, mineral boost)\\n3. Retail price with a limited-time festive discount\\n4. Clear call-to-action to download Califnco Mobile App for free doorstep installation\\n5. 8-10 trending water quality and lifestyle hashtags.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Product Name: {{ $json.product.name }}\\nCategory: {{ $json.product.category }}\\nRetail Price: Rs. {{ $json.product.price }}\\nCatalog Description: {{ $json.product.description }}\"\n    }\n  ],\n  \"temperature\": 0.7\n}",
         "options": {}
       },
       "id": "node-ai-caption-03",
-      "name": "Generate AI Caption (Groq LLaMA 3.1)",
+      "name": "Generate AI Caption (Groq LLaMA 3.3)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -71,7 +71,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+        "url": "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -109,7 +109,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const product = $('Fetch Next Product from Catalog').first().json.product;\nconst groqResponse = $('Generate AI Caption (Groq LLaMA 3.1)').first().json;\n\nlet caption = \"💧 Experience Pure Hydration with \" + product.name + \"!\\n\\nGet doorstep installation and genuine 10-stage RO purification. Order now on the Califnco Mobile App!\\n\\n#WaterPurifier #AlkalineWater #HealthyLiving #Califnco #PureWater\";\n\nif (groqResponse?.choices && groqResponse.choices[0]?.message?.content) {\n  caption = groqResponse.choices[0].message.content.trim();\n}\n\n// Cloudinary upload setup\nconst fallbackImageUrl = product.imageUrl || \"https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800\";\n\nreturn [{\n  json: {\n    product: product,\n    caption: caption,\n    shortCaption: caption.slice(0, 300) + \"...\",\n    fallbackImageUrl: fallbackImageUrl\n  }\n}];"
+        "jsCode": "const product = $('Fetch Next Product from Catalog').first().json.product;\nconst groqResponse = $('Generate AI Caption (Groq LLaMA 3.3)').first().json;\n\nlet caption = \"💧 Experience Pure Hydration with \" + product.name + \"!\\n\\nGet doorstep installation and genuine 10-stage RO purification. Order now on the Califnco Mobile App!\\n\\n#WaterPurifier #AlkalineWater #HealthyLiving #Califnco #PureWater\";\n\nif (groqResponse?.choices && groqResponse.choices[0]?.message?.content) {\n  caption = groqResponse.choices[0].message.content.trim();\n}\n\n// Cloudinary upload setup\nconst fallbackImageUrl = product.imageUrl || \"https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800\";\n\nreturn [{\n  json: {\n    product: product,\n    caption: caption,\n    shortCaption: caption.slice(0, 300) + \"...\",\n    fallbackImageUrl: fallbackImageUrl\n  }\n}];"
       },
       "id": "node-parse-data-05",
       "name": "Format Caption & Fallbacks",
@@ -267,7 +267,7 @@
       "main": [
         [
           {
-            "node": "Generate AI Caption (Groq LLaMA 3.1)",
+            "node": "Generate AI Caption (Groq LLaMA 3.3)",
             "type": "main",
             "index": 0
           },
@@ -279,7 +279,7 @@
         ]
       ]
     },
-    "Generate AI Caption (Groq LLaMA 3.1)": {
+    "Generate AI Caption (Groq LLaMA 3.3)": {
       "main": [
         [
           {

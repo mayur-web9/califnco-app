@@ -1,13 +1,23 @@
-import { db } from "../config/firebase";
+import { db, auth } from "../config/firebase";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001";
 
+async function getAuthHeaders() {
+  const token = await auth.currentUser?.getIdToken();
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 // 1. Retail: Request Razorpay payment order from server (server recomputes total)
 export async function createRetailPaymentOrder({ userId, items }) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SERVER_URL}/payment/create-order`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ userId, items })
   });
   const data = await res.json();
@@ -26,9 +36,10 @@ export async function verifyPaymentAndCreateOrder({
   items,
   address
 }) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SERVER_URL}/payment/verify`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({
       razorpay_order_id,
       razorpay_payment_id,
@@ -47,9 +58,10 @@ export async function verifyPaymentAndCreateOrder({
 
 // 3. Wholesale: Place dealer bulk order via server (checks dealer approval & wholesale prices)
 export async function placeBulkOrder({ userId, items, address }) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SERVER_URL}/orders/bulk`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ userId, items, address })
   });
   const data = await res.json();
@@ -59,24 +71,26 @@ export async function placeBulkOrder({ userId, items, address }) {
   return data;
 }
 
-// 4. Fetch orders for current user (allowed by Firestore security rules: resource.data.userId == request.auth.uid)
-export async function getUserOrders(userId) {
+// 4. Query orders for a user (Retail or Bulk)
+export async function fetchUserOrders(userId) {
   try {
-    const snap = await getDocs(
-      query(collection(db, "orders"), where("userId", "==", userId), orderBy("createdAt", "desc"))
+    const q = query(
+      collection(db, "orders"),
+      where("userId", "==", userId),
+      orderBy("createdAt", "desc")
     );
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (err) {
-    // If composite index is pending/building, query by userId and sort in memory
-    const snap = await getDocs(
-      query(collection(db, "orders"), where("userId", "==", userId))
-    );
-    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    list.sort((a, b) => {
-      const timeA = a.createdAt?.seconds || (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0);
-      const timeB = b.createdAt?.seconds || (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0);
-      return timeB - timeA;
+    // Fallback if composite index is pending
+    const qFallback = query(collection(db, "orders"), where("userId", "==", userId));
+    const snap = await getDocs(qFallback);
+    const orders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    orders.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
     });
-    return list;
+    return orders;
   }
 }

@@ -4,9 +4,8 @@ import {
   StyleSheet, ActivityIndicator, Alert, Modal
 } from "react-native";
 import { getProducts, getWholesalePrices } from "../../services/productService";
-import { CATEGORIES } from "../../constants/categories";
 import { useAuth } from "../../hooks/useAuth";
-import { createOrder } from "../../services/orderService";
+import { placeBulkOrder } from "../../services/orderService";
 import ProductCard from "../../components/ProductCard";
 import { formatPrice } from "../../utils/formatPrice";
 import colors from "../../constants/colors";
@@ -70,24 +69,14 @@ export default function DealerCatalogScreen({ navigation }) {
 
     setPlacingOrder(true);
     try {
-      const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001";
-      const response = await fetch(`${SERVER_URL}/orders/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: profile.uid,
-          items: [{
-            productId: selectedProduct.id,
-            qty: orderQty
-          }],
-          address: profile.address || { line1: "Dealer Store", city: "Bengaluru", state: "KA", pincode: "560001" }
-        })
+      const resData = await placeBulkOrder({
+        userId: profile.uid,
+        items: [{
+          productId: selectedProduct.id,
+          qty: orderQty
+        }],
+        address: profile.address || { line1: "Dealer Store", city: "Bengaluru", state: "KA", pincode: "560001" }
       });
-
-      const resData = await response.json();
-      if (!response.ok || !resData.success) {
-        throw new Error(resData.error || "Failed to place bulk order");
-      }
 
       setSelectedProduct(null);
       Alert.alert(

@@ -274,7 +274,7 @@ Phase 5 & 6 — Executive Admin Web portal (React + Vite, live telemetry, order 
 - Built full-featured Executive Admin Web Portal in `admin-web/`:
   - `package.json`, `vite.config.js`, `index.html`, and `vercel.json` (configured with client-side SPA route rewrites for zero 404s).
   - Luxury SaaS design system in `src/styles/admin.css` featuring dark blue/slate palette, glassmorphism card containers, glowing teal accents, responsive flexbox layout, and custom scrollbars.
-  - Authentication Gatekeeper (`src/views/LoginView.jsx`): Sign-in modal verifying `users/{uid}.role === "Admin"` in Firestore before granting entry, with evaluation one-click prefill (`admin@test.com` / `Admin@123456`).
+  - Authentication Gatekeeper (`src/views/LoginView.jsx`): Sign-in modal verifying `users/{uid}.role === "Admin"` in Firestore before granting entry.
   - Executive Command Center (`src/views/DashboardView.jsx`): Live KPI summary cards (Total Revenue with INR currency formatting, Orders count, Pending Dealer reviews, Active Service tickets, Low Stock alerts) and recent order queue.
   - Dealer Application Pipeline (`src/views/DealersView.jsx`): List of registered B2B dealers with status tabs ("Pending", "Approved", "All"), business details, and instant one-click Approve/Reject buttons updating `users/{uid}.dealerStatus` in real time.
   - Fulfillment & Order Operations (`src/views/OrdersView.jsx`): Full order stream with "Retail" vs "Bulk" type filters, search by customer ID / payment ID, and status updater dropdown ("confirmed", "dispatched", "delivered", "cancelled").

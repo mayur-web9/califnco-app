@@ -40,11 +40,6 @@ export default function LoginView({ onLoginSuccess }) {
     }
   }
 
-  function prefillAdmin() {
-    setEmail("admin@test.com");
-    setPassword("Admin@123456");
-  }
-
   return (
     <div className="login-wrap">
       <div className="login-card">
@@ -97,14 +92,6 @@ export default function LoginView({ onLoginSuccess }) {
             {loading ? "Authenticating..." : "Sign in to Dashboard →"}
           </button>
         </form>
-
-        <div className="quick-creds">
-          <div><strong>Evaluation Credentials:</strong></div>
-          <div><code>admin@test.com</code> / <code>Admin@123456</code></div>
-          <button type="button" className="quick-creds-btn" onClick={prefillAdmin}>
-            ⚡ Prefill Admin Credentials
-          </button>
-        </div>
       </div>
     </div>
   );

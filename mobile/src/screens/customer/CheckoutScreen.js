@@ -7,6 +7,7 @@ import { WebView } from "react-native-webview";
 import { useCart } from "../../hooks/useCart";
 import { useAuth } from "../../hooks/useAuth";
 import { formatPrice } from "../../utils/formatPrice";
+import { auth } from "../../config/firebase";
 import colors from "../../constants/colors";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001";
@@ -89,9 +90,13 @@ export default function CheckoutScreen({ navigation }) {
     const timeoutId = setTimeout(() => abortCtrl.abort(), 45000); // 45s timeout for Render free tier wake-up
 
     try {
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch(`${SERVER_URL}/payment/create-order`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
         signal: abortCtrl.signal,
         body: JSON.stringify({
           userId: profile.uid,
@@ -155,9 +160,13 @@ export default function CheckoutScreen({ navigation }) {
     setStatusMsg("Verifying signature with server & generating order...");
 
     try {
+      const token = await auth.currentUser?.getIdToken();
       const response = await fetch(`${SERVER_URL}/payment/verify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           razorpay_order_id,
           razorpay_payment_id,

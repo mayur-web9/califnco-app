@@ -1,6 +1,8 @@
 const { fork } = require("child_process");
 const http = require("http");
 const crypto = require("crypto");
+const { initializeApp } = require("firebase/app");
+const { getAuth, signInWithEmailAndPassword } = require("firebase/auth");
 const { db, auth } = require("../firebaseAdmin");
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
@@ -8,17 +10,23 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const SERVER_URL = "http://localhost:3001";
 let spawnedServer = null;
 
+// Client auth for generating ID tokens
+const clientApp = initializeApp({
+  apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyCvENhVhJc7CqRMNVWiZwFpG-R0c9vRqVU",
+  authDomain: "gen-lang-client-0022579334.firebaseapp.com",
+  projectId: "gen-lang-client-0022579334"
+});
+const clientAuth = getAuth(clientApp);
+
 async function ensureServerRunning() {
   try {
     const res = await fetch(`${SERVER_URL}/health`);
     if (res.ok) return;
   } catch (e) {
-    // Server is not running, spawn it
     console.log("Starting Califnco server instance for integration tests...");
     spawnedServer = fork(path.resolve(__dirname, "../index.js"), [], {
       stdio: "ignore"
     });
-    // Wait up to 5 seconds for health
     for (let i = 0; i < 20; i++) {
       await new Promise(r => setTimeout(r, 250));
       try {
@@ -32,11 +40,15 @@ async function ensureServerRunning() {
   }
 }
 
-async function postJson(endpoint, data) {
+async function postJson(endpoint, data, token) {
   const url = `${SERVER_URL}${endpoint}`;
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(data)
   });
   const json = await res.json();
@@ -49,7 +61,6 @@ async function getJson(endpoint) {
   const json = await res.json();
   return { status: res.status, data: json };
 }
-
 
 async function runTests() {
   console.log("==========================================");
@@ -76,20 +87,23 @@ async function runTests() {
   const health = await getJson("/health");
   assert(health.status === 200 && health.data.status === "ok", "GET /health returns status: ok");
 
-  // 2. Fetch test users
-  const custAuth = await auth.getUserByEmail("customer@test.com");
-  const approvedDealerAuth = await auth.getUserByEmail("dealer@test.com");
-  const pendingDealerAuth = await auth.getUserByEmail("dealer.pending@test.com");
+  // 2. Fetch test users and generate ID tokens
+  const custCred = await signInWithEmailAndPassword(clientAuth, "customer@test.com", "Customer@123456");
+  const custToken = await custCred.user.getIdToken();
+
+  const approvedCred = await signInWithEmailAndPassword(clientAuth, "dealer@test.com", "Dealer@123456");
+  const approvedDealerToken = await approvedCred.user.getIdToken();
+
+  const pendingCred = await signInWithEmailAndPassword(clientAuth, "dealer.pending@test.com", "Dealer@123456");
+  const pendingDealerToken = await pendingCred.user.getIdToken();
 
   // 3. Retail: Server-Side Price Recomputation
   console.log("\n2. Testing /payment/create-order (Tamper-Proof Price Recomputation)...");
-  // Client only sends productId and qty — NO total
   const createOrderRes = await postJson("/payment/create-order", {
-    userId: custAuth.uid,
     items: [
       { productId: "prod_purifier_01", qty: 2 } // 14999 * 2 = 29998
     ]
-  });
+  }, custToken);
 
   assert(createOrderRes.status === 200, "POST /payment/create-order responded with 200 OK");
   assert(createOrderRes.data.orderId.length > 0, `Generated Razorpay Order ID: ${createOrderRes.data.orderId}`);
@@ -112,10 +126,9 @@ async function runTests() {
     razorpay_order_id: orderId,
     razorpay_payment_id: paymentId,
     razorpay_signature: "forged_invalid_signature_xyz",
-    userId: custAuth.uid,
     items: [{ productId: "prod_purifier_01", qty: 2 }],
     address: { line1: "123 Main St", city: "Bengaluru", state: "KA", pincode: "560001" }
-  });
+  }, custToken);
   assert(invalidVerify.status === 400, "Invalid signature rejected with 400 Bad Request");
 
   // B) Valid signature test
@@ -123,55 +136,48 @@ async function runTests() {
     razorpay_order_id: orderId,
     razorpay_payment_id: paymentId,
     razorpay_signature: validSignature,
-    userId: custAuth.uid,
     items: [{ productId: "prod_purifier_01", qty: 2 }],
     address: { line1: "123 Main St", city: "Bengaluru", state: "KA", pincode: "560001" }
-  });
+  }, custToken);
 
   assert(validVerify.status === 200, "Valid signature accepted with 200 OK");
   assert(validVerify.data.success === true, "Verification returned success: true");
   assert(validVerify.data.status === "confirmed", "Order created with status: 'confirmed'");
   assert(validVerify.data.orderId.length > 0, `Order created in Firestore via Admin SDK: ${validVerify.data.orderId}`);
 
-  // Query Firestore directly to confirm order exists with verified values
-  const verifiedOrderDoc = await db.collection("orders").doc(validVerify.data.orderId).get();
-  assert(verifiedOrderDoc.exists, "Order document exists in Firestore");
-  assert(verifiedOrderDoc.data().total === 29998, "Order total in Firestore is server-computed Rs. 29998");
-  assert(verifiedOrderDoc.data().paymentId === paymentId, "Order contains verified paymentId");
-  assert(verifiedOrderDoc.data().type === "retail", "Order type is 'retail'");
+  // C) Verify order exists in Firestore with correct server-computed values
+  const savedOrderDoc = await db.collection("orders").doc(validVerify.data.orderId).get();
+  assert(savedOrderDoc.exists, "Order document exists in Firestore");
+  assert(savedOrderDoc.data().total === 29998, `Order total in Firestore is server-computed Rs. ${savedOrderDoc.data().total}`);
+  assert(savedOrderDoc.data().paymentId === paymentId, "Order contains verified paymentId");
+  assert(savedOrderDoc.data().type === "retail", "Order type is 'retail'");
 
-  // 5. Dealer Bulk Orders: POST /orders/bulk
+  // 5. Dealer Bulk Orders
   console.log("\n4. Testing /orders/bulk (Dealer Bulk Order Flow)...");
 
-  // A) Customer tries to place bulk order -> 403 Forbidden
+  // A) Non-dealer customer should be blocked with 403 Forbidden
   const custBulk = await postJson("/orders/bulk", {
-    userId: custAuth.uid,
-    items: [{ productId: "prod_purifier_01", qty: 10 }]
-  });
+    items: [{ productId: "prod_purifier_01", qty: 5 }]
+  }, custToken);
   assert(custBulk.status === 403, "Non-dealer blocked with 403 Forbidden on /orders/bulk");
 
-  // B) Pending dealer tries to place bulk order -> 403 Forbidden
+  // B) Pending dealer should be blocked with 403 Forbidden
   const pendingBulk = await postJson("/orders/bulk", {
-    userId: pendingDealerAuth.uid,
-    items: [{ productId: "prod_purifier_01", qty: 10 }]
-  });
+    items: [{ productId: "prod_purifier_01", qty: 5 }]
+  }, pendingDealerToken);
   assert(pendingBulk.status === 403, "Pending dealer blocked with 403 Forbidden on /orders/bulk");
 
-  // C) Approved dealer tries to order below minQty -> 400 Bad Request
-  // prod_purifier_01 minQty is 5
-  const belowMinBulk = await postJson("/orders/bulk", {
-    userId: approvedDealerAuth.uid,
-    items: [{ productId: "prod_purifier_01", qty: 2 }]
-  });
-  assert(belowMinBulk.status === 400, "Below minQty rejected with 400 Bad Request");
+  // C) Approved dealer below minQty should be rejected with 400
+  const belowMinQtyBulk = await postJson("/orders/bulk", {
+    items: [{ productId: "prod_purifier_01", qty: 2 }] // minQty is 5
+  }, approvedDealerToken);
+  assert(belowMinQtyBulk.status === 400, "Below minQty rejected with 400 Bad Request");
 
-  // D) Approved dealer orders >= minQty -> 200 OK with server-computed wholesale total
-  // prod_purifier_01 wholesale price is 9800 * 5 = 49000
+  // D) Approved dealer with valid quantity -> Success
   const validBulk = await postJson("/orders/bulk", {
-    userId: approvedDealerAuth.uid,
     items: [{ productId: "prod_purifier_01", qty: 5 }],
     address: { line1: "Dealer Warehouse", city: "Bengaluru", state: "KA", pincode: "560001" }
-  });
+  }, approvedDealerToken);
 
   assert(validBulk.status === 200, "Approved dealer bulk order accepted with 200 OK");
   assert(validBulk.data.success === true, "Bulk order returned success: true");
@@ -207,4 +213,3 @@ runTests().catch(err => {
   console.error("Test execution failed:", err);
   process.exit(1);
 });
-

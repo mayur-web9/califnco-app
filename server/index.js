@@ -28,6 +28,28 @@ try {
 app.use(cors());
 app.use(express.json());
 
+// Auth Middleware: Verify Firebase ID Token on protected routes
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
+  }
+
+  const token = authHeader.split("Bearer ")[1].trim();
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized: Empty bearer token" });
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = decodedToken;
+    next();
+  } catch (err) {
+    console.warn("Token verification failed:", err.message);
+    return res.status(401).json({ error: "Unauthorized: Invalid or expired authentication token" });
+  }
+}
+
 // 1. Health check endpoint (also used by clients to warm up sleeping Render instances)
 app.get("/health", (req, res) => {
   res.json({
@@ -40,9 +62,10 @@ app.get("/health", (req, res) => {
 
 // 2. Retail Payment: Create Razorpay Order with SERVER-SIDE PRICE RECOMPUTATION
 // Never trusts client totals: fetches real item prices from Firestore products/{id}
-app.post("/payment/create-order", async (req, res) => {
+app.post("/payment/create-order", requireAuth, async (req, res) => {
   try {
-    const { items, userId } = req.body;
+    const { items } = req.body;
+    const userId = req.user.uid;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Missing or invalid items array" });
@@ -110,29 +133,49 @@ app.post("/payment/create-order", async (req, res) => {
 });
 
 // 3. Retail Payment: Verify Signature & Save Order in Firestore
-// Verifies HMAC SHA256 signature using RAZORPAY_KEY_SECRET, then creates order in Firestore
-app.post("/payment/verify", async (req, res) => {
+// IDEMPOTENT: Returns existing confirmed order if paymentId is already verified
+// ATOMIC: Decrements inventory stock and creates order document inside a Firestore transaction
+app.post("/payment/verify", requireAuth, async (req, res) => {
   try {
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      userId,
       items,
       address
     } = req.body;
+    const userId = req.user.uid;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !userId || !items) {
+    if (!razorpay_order_id || !razorpay_payment_id || !items) {
       return res.status(400).json({ error: "Missing required verification fields" });
     }
 
-    // Verify HMAC SHA256 signature
+    // 1. IDEMPOTENCY CHECK
+    // If an order with this razorpay_payment_id already exists, return it immediately
+    const existingOrderSnap = await db.collection("orders")
+      .where("paymentId", "==", razorpay_payment_id)
+      .limit(1)
+      .get();
+
+    if (!existingOrderSnap.empty) {
+      const existingDoc = existingOrderSnap.docs[0];
+      const existingData = existingDoc.data();
+      return res.json({
+        success: true,
+        orderId: existingDoc.id,
+        status: existingData.status,
+        total: existingData.total,
+        isDuplicate: true,
+        message: "Payment already verified. Returning existing confirmed order."
+      });
+    }
+
+    // 2. Verify HMAC SHA256 signature
     const expectedSignature = crypto
       .createHmac("sha256", razorpayKeySecret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
-    // In production, signature MUST match. In simulated test mode with placeholder keys, allow matching test signature.
     const isSignatureValid =
       razorpay_signature === expectedSignature ||
       (razorpay_signature === "test_signature" && razorpayKeySecret === "rzp_test_secret_placeholder") ||
@@ -142,7 +185,7 @@ app.post("/payment/verify", async (req, res) => {
       return res.status(400).json({ success: false, error: "Invalid payment signature. Payment rejected." });
     }
 
-    // Recompute total and line items from Firestore (tamper-proof)
+    // 3. Recompute total and line items from Firestore (tamper-proof)
     let total = 0;
     const verifiedItems = [];
 
@@ -162,32 +205,45 @@ app.post("/payment/verify", async (req, res) => {
       }
     }
 
-    // Server creates order using Admin SDK (bypasses allow create: if false)
-    const orderDoc = {
-      userId,
-      type: "retail",
-      status: "confirmed",
-      paymentId: razorpay_payment_id,
-      razorpayOrderId: razorpay_order_id,
-      items: verifiedItems,
-      total,
-      address: address || {},
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
-
-    const orderRef = await db.collection("orders").add(orderDoc);
-
-    // Deduct stock for each purchased product
-    for (const item of verifiedItems) {
-      try {
-        await db.collection("products").doc(item.productId).update({
-          stock: admin.firestore.FieldValue.increment(-item.qty)
-        });
-      } catch (stockErr) {
-        console.warn(`Failed to decrement stock for ${item.productId}:`, stockErr.message);
+    // 4. ATOMIC FIRESTORE TRANSACTION: Read and verify stock, decrement stock, and write order
+    const orderRef = db.collection("orders").doc();
+    await db.runTransaction(async (transaction) => {
+      // Step A: All Reads must happen first in Firestore transactions
+      const productSnapshots = [];
+      for (const item of verifiedItems) {
+        const pRef = db.collection("products").doc(item.productId);
+        const pSnap = await transaction.get(pRef);
+        if (!pSnap.exists) {
+          throw new Error(`Product not found: ${item.productId}`);
+        }
+        const currentStock = Number(pSnap.data().stock) || 0;
+        if (currentStock < item.qty) {
+          throw new Error(`Insufficient stock for ${pSnap.data().name || item.productId}. Available: ${currentStock}, Requested: ${item.qty}`);
+        }
+        productSnapshots.push({ ref: pRef, currentStock, qty: item.qty });
       }
-    }
+
+      // Step B: All Writes executed after reads
+      for (const { ref, currentStock, qty } of productSnapshots) {
+        transaction.update(ref, {
+          stock: currentStock - qty,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      transaction.set(orderRef, {
+        userId,
+        type: "retail",
+        status: "confirmed",
+        paymentId: razorpay_payment_id,
+        razorpayOrderId: razorpay_order_id,
+        items: verifiedItems,
+        total,
+        address: address || {},
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
 
     // Send push notification if user has an FCM token registered
     try {
@@ -204,7 +260,6 @@ app.post("/payment/verify", async (req, res) => {
         });
       }
     } catch (fcmErr) {
-      // Non-critical: order is already saved
       console.warn("FCM delivery note:", fcmErr.message);
     }
 
@@ -221,13 +276,15 @@ app.post("/payment/verify", async (req, res) => {
 });
 
 // 4. Dealer Bulk Order Endpoint (SERVER-SIDE PRICE & MINQTY VERIFICATION)
-// Checks dealer approval status, enforces wholesale minQty, calculates from wholesale/ collection
-app.post("/orders/bulk", async (req, res) => {
+// Requires valid dealer ID token; returns 403 Forbidden for non-approved dealers or customers
+// ATOMIC: Decrements inventory stock and creates order document inside a Firestore transaction
+app.post("/orders/bulk", requireAuth, async (req, res) => {
   try {
-    const { userId, items, address } = req.body;
+    const { items, address } = req.body;
+    const userId = req.user.uid;
 
-    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: "Missing userId or items array" });
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Missing items array" });
     }
 
     // Verify dealer role and approved status in Firestore
@@ -276,30 +333,45 @@ app.post("/orders/bulk", async (req, res) => {
       });
     }
 
-    // Server creates bulk order via Admin SDK
-    const orderDoc = {
-      userId,
-      type: "bulk",
-      status: "pending",
-      paymentId: `bulk_invoice_${Date.now()}`,
-      razorpayOrderId: "",
-      items: verifiedItems,
-      total: computedTotal,
-      address: address || userData.address || {},
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+    // ATOMIC FIRESTORE TRANSACTION: Read and verify warehouse stock, decrement, and write order
+    const orderRef = db.collection("orders").doc();
+    await db.runTransaction(async (transaction) => {
+      // Step A: All Reads
+      const productSnapshots = [];
+      for (const item of verifiedItems) {
+        const pRef = db.collection("products").doc(item.productId);
+        const pSnap = await transaction.get(pRef);
+        if (!pSnap.exists) {
+          throw new Error(`Product not found: ${item.productId}`);
+        }
+        const currentStock = Number(pSnap.data().stock) || 0;
+        if (currentStock < item.qty) {
+          throw new Error(`Insufficient warehouse stock for ${pSnap.data().name || item.productId}. Available: ${currentStock}, Requested: ${item.qty}`);
+        }
+        productSnapshots.push({ ref: pRef, currentStock, qty: item.qty });
+      }
 
-    const orderRef = await db.collection("orders").add(orderDoc);
-
-    // Deduct stock for each item
-    for (const item of verifiedItems) {
-      try {
-        await db.collection("products").doc(item.productId).update({
-          stock: admin.firestore.FieldValue.increment(-item.qty)
+      // Step B: All Writes
+      for (const { ref, currentStock, qty } of productSnapshots) {
+        transaction.update(ref, {
+          stock: currentStock - qty,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
-      } catch (e) {}
-    }
+      }
+
+      transaction.set(orderRef, {
+        userId,
+        type: "bulk",
+        status: "pending",
+        paymentId: `bulk_invoice_${Date.now()}`,
+        razorpayOrderId: "",
+        items: verifiedItems,
+        total: computedTotal,
+        address: address || userData.address || {},
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
 
     res.json({
       success: true,
@@ -315,11 +387,18 @@ app.post("/orders/bulk", async (req, res) => {
 });
 
 // 5. FCM Push Notification Delivery Endpoint
-app.post("/notifications/send", async (req, res) => {
+app.post("/notifications/send", requireAuth, async (req, res) => {
   try {
     const { userId, title, body, data } = req.body;
     if (!userId || !title || !body) {
       return res.status(400).json({ error: "Missing userId, title, or body" });
+    }
+
+    // Allow user to send to themselves, or admin to send to anyone
+    const requesterDoc = await db.collection("users").doc(req.user.uid).get();
+    const isAdmin = requesterDoc.exists && requesterDoc.data()?.role === "Admin";
+    if (req.user.uid !== userId && !isAdmin) {
+      return res.status(403).json({ error: "Forbidden: Cannot send notifications on behalf of other users" });
     }
 
     const userSnap = await db.collection("users").doc(userId).get();
