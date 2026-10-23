@@ -1,4 +1,4 @@
-﻿# Environment files — never commit secrets
+# Environment files — never commit secrets
 .env
 .env.local
 .env.development
@@ -29,6 +29,8 @@ firestore-debug.log
 # Service account keys — treat as secrets
 *serviceAccountKey*.json
 *service-account*.json
+*firebase-adminsdk*.json
+*adminsdk*.json
 
 # OS junk
 .DS_Store
