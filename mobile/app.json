@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Califnco",
-    "slug": "califnco",
+    "slug": "mayur",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -26,7 +26,14 @@
           "icon": "./assets/notification-icon.png",
           "color": "#0a2540"
         }
-      ]
-    ]
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c0a650c0-157a-49d9-a232-318ed74a7a62"
+      }
+    },
+    "owner": "mayur-web9s-team"
   }
 }
