@@ -1,4 +1,4 @@
-// Automated Integration Test for Phase 3 Server Endpoints
+const { fork } = require("child_process");
 const http = require("http");
 const crypto = require("crypto");
 const { db, auth } = require("../firebaseAdmin");
@@ -6,6 +6,31 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
 const SERVER_URL = "http://localhost:3001";
+let spawnedServer = null;
+
+async function ensureServerRunning() {
+  try {
+    const res = await fetch(`${SERVER_URL}/health`);
+    if (res.ok) return;
+  } catch (e) {
+    // Server is not running, spawn it
+    console.log("Starting Califnco server instance for integration tests...");
+    spawnedServer = fork(path.resolve(__dirname, "../index.js"), [], {
+      stdio: "ignore"
+    });
+    // Wait up to 5 seconds for health
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 250));
+      try {
+        const res = await fetch(`${SERVER_URL}/health`);
+        if (res.ok) {
+          console.log("Server instance is ready.\n");
+          return;
+        }
+      } catch (err) {}
+    }
+  }
+}
 
 async function postJson(endpoint, data) {
   const url = `${SERVER_URL}${endpoint}`;
@@ -25,10 +50,13 @@ async function getJson(endpoint) {
   return { status: res.status, data: json };
 }
 
+
 async function runTests() {
   console.log("==========================================");
   console.log("   PHASE 3 SERVER INTEGRATION TEST SUITE");
   console.log("==========================================\n");
+
+  await ensureServerRunning();
 
   let passed = 0;
   let failed = 0;
@@ -164,10 +192,19 @@ async function runTests() {
   console.log(`   PHASE 3 SERVER TESTS: ${passed} PASSED, ${failed} FAILED`);
   console.log("==========================================");
 
+  if (spawnedServer) {
+    spawnedServer.kill();
+  }
+
   if (failed > 0) process.exit(1);
+  process.exit(0);
 }
 
 runTests().catch(err => {
+  if (spawnedServer) {
+    spawnedServer.kill();
+  }
   console.error("Test execution failed:", err);
   process.exit(1);
 });
+
