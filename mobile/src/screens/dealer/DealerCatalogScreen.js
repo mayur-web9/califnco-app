@@ -70,27 +70,29 @@ export default function DealerCatalogScreen({ navigation }) {
 
     setPlacingOrder(true);
     try {
-      const totalAmount = unitPrice * orderQty;
-      await createOrder({
-        userId: profile.uid,
-        type: "wholesale",
-        items: [{
-          productId: selectedProduct.id,
-          name: selectedProduct.name,
-          imageUrl: selectedProduct.imageUrl,
-          price: unitPrice,
-          qty: orderQty
-        }],
-        total: totalAmount,
-        address: profile.address || { line1: "Dealer Store", city: "City", state: "State", pincode: "110001" },
-        paymentId: "wholesale_invoice_" + Date.now(),
-        razorpayOrderId: ""
+      const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001";
+      const response = await fetch(`${SERVER_URL}/orders/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: profile.uid,
+          items: [{
+            productId: selectedProduct.id,
+            qty: orderQty
+          }],
+          address: profile.address || { line1: "Dealer Store", city: "Bengaluru", state: "KA", pincode: "560001" }
+        })
       });
+
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        throw new Error(resData.error || "Failed to place bulk order");
+      }
 
       setSelectedProduct(null);
       Alert.alert(
-        "Wholesale Order Placed!",
-        `Order confirmed for ${orderQty} units of ${selectedProduct.name} at ${formatPrice(totalAmount)}. Check 'My Orders' tab to track status.`
+        "Bulk Order Placed! 📦",
+        `Order confirmed for ${orderQty} units of ${selectedProduct.name} at ${formatPrice(resData.total)}. Invoice #${resData.orderId.slice(-6).toUpperCase()} generated. View under 'My Orders'.`
       );
     } catch (err) {
       Alert.alert("Order failed", err.message);

@@ -4,8 +4,15 @@ require("dotenv").config();
 
 let serviceAccount;
 try {
-  const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./serviceAccountKey.json";
-  serviceAccount = require(path.resolve(__dirname, keyPath));
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, "base64").toString("utf8");
+    serviceAccount = JSON.parse(decoded);
+  } else {
+    const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./serviceAccountKey.json";
+    serviceAccount = require(path.resolve(__dirname, keyPath));
+  }
 } catch (err) {
   console.error("Failed to load Firebase service account key:", err.message);
   process.exit(1);

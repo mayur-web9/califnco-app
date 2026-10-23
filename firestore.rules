@@ -61,15 +61,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // orders collection
+    // orders collection — read user's own / admin; create/update/delete strictly server-side via Admin SDK
     match /orders/{orderId} {
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      // Direct client creation must be pending, cannot self-assign paymentId, and wholesale restricted to approved dealers
-      allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == "pending"
-        && (request.resource.data.paymentId == null || request.resource.data.paymentId == "")
-        && (request.resource.data.type == "retail" || (request.resource.data.type == "wholesale" && isApprovedDealer()));
+      // Clients are forbidden from creating orders directly. All orders (retail & bulk)
+      // are created exclusively by the Express backend after server-side price & signature verification.
+      allow create: if false;
       allow update: if isAdmin();
       allow delete: if false;
     }

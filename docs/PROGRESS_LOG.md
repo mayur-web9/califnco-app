@@ -215,3 +215,53 @@ Security rules hardening & Phase 3 server integration.
 
 **Next:**
 Phase 3 — Server backend integration: Server-side recomputation of order totals, Razorpay order creation (`/payment/create-order`), Razorpay WebView checkout, server-side HMAC SHA256 signature verification (`/payment/verify`) before saving orders, FCM push notification delivery, and OpenStreetMap/Nominatim address search.
+
+---
+
+## 2026-10-23 — Phase 3: Server Backend Integration & Payment Verification
+
+**What was done:**
+- Built Express backend service in `server/index.js`:
+  - `GET /health`: Health check and uptime endpoint (used for pinging sleeping free cloud instances).
+  - `POST /payment/create-order`: Server-side price recomputation from Firestore `products` catalog (ignores client-sent totals), generating official Razorpay test orders.
+  - `POST /payment/verify`: Verifies Razorpay HMAC SHA256 signatures (`razorpay_order_id|razorpay_payment_id` against `RAZORPAY_KEY_SECRET`), creates confirmed retail orders in Firestore via Admin SDK, and decrements product inventory.
+  - `POST /orders/bulk`: Dedicated B2B dealer bulk ordering endpoint. Verifies dealer approval status in `users/{userId}`, enforces `minQty` per item, recomputes total from `wholesale/` catalog, and writes orders with standardized `type: "bulk"`.
+  - `POST /notifications/send`: FCM push notification delivery via `admin.messaging()`.
+  - `GET /address/search`: Nominatim proxy with compliant User-Agent (`Califnco-WaterPurifier-App/1.0`).
+- Upgraded `server/firebaseAdmin.js`:
+  - Added support for `FIREBASE_SERVICE_ACCOUNT_JSON` and `FIREBASE_SERVICE_ACCOUNT_BASE64` environment variables for Render cloud deployment.
+- Mobile Checkout & Webview Integration (`mobile/`):
+  - Installed `react-native-webview` (SDK 51 compatible).
+  - Upgraded `CheckoutScreen.js` to open Razorpay Checkout sheet inside WebView, receive payment completion message, call `POST /payment/verify`, and handle Render sleeping tier wake-up timeout (45s).
+  - Added button-triggered locality/landmark lookup.
+  - Refactored `mobile/src/services/orderService.js` and `DealerCatalogScreen.js` to place bulk orders exclusively through `POST /orders/bulk`.
+  - Enforced `allow create: if false;` on `orders` collection in `firestore.rules`.
+- Automated Testing & Verification:
+  - Created `server/scripts/verifyPhase3.js`: 25 integration tests passed (health check, price recomputation, signature verification, non-dealer bulk block, below minQty block, approved dealer bulk success, Nominatim search).
+  - Updated `server/scripts/testRulesSecurity.js`: 20/20 client security tests passed confirming client order creation is strictly blocked.
+
+**Files changed:**
+- server/index.js (new)
+- server/firebaseAdmin.js (updated)
+- server/scripts/verifyPhase3.js (new)
+- server/package.json (updated)
+- mobile/package.json (updated)
+- mobile/src/screens/customer/CheckoutScreen.js (updated)
+- mobile/src/screens/dealer/DealerCatalogScreen.js (updated)
+- mobile/src/services/orderService.js (updated)
+- firestore.rules (updated)
+- docs/PROGRESS_LOG.md (updated)
+
+**Why:**
+Ensures complete security and financial integrity: clients can never forge prices, payment IDs, or order statuses. All pricing and order creation is handled by the server.
+
+**How tested:**
+- Executed `node server/scripts/verifyPhase3.js`: 25 passed, 0 failed.
+- Executed `node server/scripts/testRulesSecurity.js`: 20 passed, 0 failed.
+- Executed `npx expo config --type public`: passed with code 0.
+
+**Errors:**
+None.
+
+**Next:**
+Phase 4 & 5 — Dealer flow verification and Admin Web panel on Vercel (React + Vite, dark luxury design, dealer approvals, order fulfillment, product catalog manager).

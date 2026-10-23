@@ -163,10 +163,9 @@ async function runRulesTests() {
     });
   }, "Customer CANNOT create order on behalf of another user");
 
-  let createdOrderId = null;
-  await expectSuccess(async () => {
-    // Legitimate retail order creation
-    const ref = await addDoc(collection(db, "orders"), {
+  await expectDenied(async () => {
+    // Client attempts direct order creation (blocked by allow create: if false)
+    await addDoc(collection(db, "orders"), {
       userId: customerUid,
       type: "retail",
       status: "pending",
@@ -177,8 +176,7 @@ async function runRulesTests() {
       createdAt: new Date(),
       updatedAt: new Date()
     });
-    createdOrderId = ref.id;
-  }, "Customer CAN create legitimate retail order (pending, retail, own uid)");
+  }, "Customer CANNOT create any order directly from client (all orders must be created by server)");
 
   // Service Booking security enforcement
   console.log("\n4. Testing Service Booking Constraints...");
@@ -215,12 +213,12 @@ async function runRulesTests() {
   await expectDenied(async () => {
     await addDoc(collection(db, "orders"), {
       userId: pendingCred.user.uid,
-      type: "wholesale",
+      type: "bulk",
       status: "pending",
       paymentId: "",
       total: 5000
     });
-  }, "Pending Dealer CANNOT place wholesale orders");
+  }, "Pending Dealer CANNOT place bulk orders directly");
 
   // --- SECTION 6: Approved Dealer ---
   console.log("\n6. Testing Approved Dealer Role (dealer@test.com)...");
@@ -233,10 +231,11 @@ async function runRulesTests() {
     if (snap.empty) throw new Error("Wholesale catalog query returned 0 docs");
   }, "Approved Dealer CAN read wholesale collection");
 
-  await expectSuccess(async () => {
+  await expectDenied(async () => {
+    // Even an approved dealer cannot bypass server order creation
     await addDoc(collection(db, "orders"), {
       userId: approvedCred.user.uid,
-      type: "wholesale",
+      type: "bulk",
       status: "pending",
       paymentId: "",
       items: [{ productId: "prod_purifier_01", name: "AquaPure", price: 9800, qty: 5 }],
@@ -245,7 +244,7 @@ async function runRulesTests() {
       createdAt: new Date(),
       updatedAt: new Date()
     });
-  }, "Approved Dealer CAN create wholesale orders");
+  }, "Approved Dealer CANNOT create orders directly from client (must use POST /orders/bulk)");
 
   await signOut(auth);
 
