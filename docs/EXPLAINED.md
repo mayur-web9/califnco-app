@@ -133,18 +133,102 @@ Manages authentication for three distinct roles: `Customer`, `Dealer`, and `Admi
 
 ---
 
-## Dealer Approval Flow
+## Dealer Approval Flow & Wholesale Pricing
 
-_To be written after Phase 4._
+### What it does
+Provides a dual-tier pricing and onboarding flow:
+1. Public customers see standard retail MSRP prices.
+2. Dealers apply for an account with business credentials. Their application enters a `"pending"` state.
+3. While pending, dealers cannot access wholesale pricing. They see an informative `PendingApprovalScreen`.
+4. Once an administrator clicks "Approve" in the Admin Web Portal, the user's `dealerStatus` in Firestore `users/{uid}` becomes `"approved"`.
+5. The dealer immediately gains access to the B2B Wholesale Catalog with wholesale discount pricing and minimum order quantities (`minQty`).
+
+### How data flows
+1. Public catalog is read from `products/{productId}` (open read to all users).
+2. Wholesale pricing is stored in a separate collection `wholesale/{productId}` with rule:
+   ```
+   allow read: if isApprovedDealer() || isAdmin();
+   ```
+3. When placing bulk orders, the dealer submits their order via `POST /orders/bulk` on the backend server.
+4. The server:
+   - Verifies the user is an approved dealer in `users/{userId}`.
+   - For each item, verifies that requested quantity is greater than or equal to `minQty`.
+   - Recomputes the total cost strictly using the prices in `wholesale/{productId}`.
+   - Creates the order with `type: "bulk"` in `orders` collection via Admin SDK.
+
+### Review Questions & Answers
+**Q1: How do you prevent a regular customer from seeing wholesale prices?**  
+*Answer:* Wholesale prices are stored in a dedicated `wholesale` collection in Firestore. Security rules enforce `isApprovedDealer() || isAdmin()`, which checks that `request.auth` has a corresponding `users/{uid}` record with `role == "Dealer"` and `dealerStatus == "approved"`. A customer's query to `wholesale` is rejected by Firestore Cloud at the rule level.
+
+**Q2: Can a pending dealer place a bulk order?**  
+*Answer:* No. The client UI restricts pending dealers to `PendingApprovalScreen`. Even if an attacker bypasses the mobile UI, the backend endpoint `POST /orders/bulk` independently queries Firestore for the dealer's profile and returns HTTP 403 if `dealerStatus !== "approved"`.
 
 ---
 
-## Payments (Razorpay)
+## Payments (Razorpay Integration & Security)
 
-_To be written after Phase 3._
+### What it does
+Implements a secure, end-to-end Razorpay test payment flow for retail orders:
+1. Client sends cart items to `POST /payment/create-order`.
+2. Server recomputes total from `products/` (never trusting client totals) and creates an official Razorpay order.
+3. Mobile app renders the Razorpay Standard Checkout in a dedicated `react-native-webview`.
+4. Upon successful payment, Razorpay returns `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature`.
+5. Client sends these parameters to `POST /payment/verify`.
+6. Server calculates `crypto.createHmac("sha256", secret).update(order_id + "|" + payment_id).digest("hex")` and compares it using `crypto.timingSafeEqual`.
+7. Once verified, the server creates the order in Firestore with `status: "confirmed"`, `type: "retail"`, and decrements inventory.
+
+### Review Questions & Answers
+**Q1: Why can't the client write directly to the `orders` collection in Firestore?**  
+*Answer:* In earlier iterations, client direct creates were allowed, which meant a compromised client could write unpaid orders or tamper with totals. Under Phase 3 rules, `match /orders/{orderId} { allow create: if false; }`. All orders must be created by the backend Express server using the Firebase Admin SDK after cryptographic payment signature verification.
+
+**Q2: What is the timing attack protection in payment verification?**  
+*Answer:* Instead of using standard string equality (`computedSignature === receivedSignature`), we use `crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(received))`. This prevents side-channel timing attacks that could deduce valid signatures character-by-character.
 
 ---
 
-## Notifications (FCM, Email, SMS)
+## Executive Admin Web Portal (React + Vite + Vercel)
 
-_To be written after Phase 6._
+### What it does
+Provides executive administrators with an overview and management tools for the business:
+- **Command Center Dashboard**: Live revenue analytics, order counts, pending dealer counts, and recent transactions.
+- **Order Operations**: Filter by Retail vs Bulk wholesale, search by order ID or customer, and update fulfillment statuses (`confirmed` -> `dispatched` -> `delivered`).
+- **Dealer Pipeline**: One-click review, approval, or rejection of B2B dealer registrations.
+- **Service Desk**: View customer maintenance requests, assign technicians, and record resolution notes.
+- **Warehouse Inventory**: Real-time stock levels with one-click adjustments (`+1`, `-1`, `+10`), low-stock indicators, and an "Add New Product" modal.
+
+### Architecture & Deployment
+- Built with **React 18** and **Vite 5**.
+- Uses real-time Firestore `onSnapshot` listeners so multiple administrators see instant updates without manual page refreshes.
+- Configured with `vercel.json` rewrite rules (`{ "source": "/(.*)", "destination": "/index.html" }`) to support client-side single page app (SPA) routing on Vercel without 404 errors.
+
+---
+
+## Automated Social Media Marketing (n8n + AI + Instagram)
+
+### What it does
+Runs an automated scheduled workflow every morning at 10:00 AM IST to post the daily featured product to Instagram and WhatsApp:
+1. **Catalog Rotation**: Calls `GET /automation/next-product`, which reads `automation/state` in Firestore, advances to the next catalog item, and returns clean product metadata.
+2. **AI Caption**: Generates marketing copy with TDS benefits, festive pricing, and hashtags via Groq LLaMA 3.1.
+3. **AI Image**: Generates luxury studio photography via Hugging Face FLUX.1-schnell (with graceful fallback to high-res catalog photos).
+4. **CDN Hosting**: Uploads the media to Cloudinary to provide a public HTTPS URL required by Meta's crawler.
+5. **Meta Graph API**: Publishes the post directly to Instagram Business account via container creation and media publish.
+6. **WhatsApp Status**: Broadcasts the product update to `status@broadcast` via headless WAHA Docker container.
+
+### Review Questions & Answers
+**Q1: Why is an n8n workflow export provided instead of just a script?**  
+*Answer:* The assignment explicitly specifies an n8n workflow (`automation/workflow.json`). n8n provides visual execution monitoring, individual node state inspection, automatic retry logic, and zero-code credential management.
+
+**Q2: What happens if Hugging Face or Groq has an API rate limit or outage?**  
+*Answer:* The workflow includes a fallback node (`Format Caption & Fallbacks`). If the generative image API fails, it automatically falls back to the high-resolution product photography seeded in Firestore. If the LLM caption fails, it falls back to a curated high-converting promotional template.
+
+---
+
+## Address Lookup & Nominatim Integration
+
+### What it does
+Provides fast locality and pincode autofill for Indian delivery addresses without incurring Google Maps API fees.
+- Utilizes OpenStreetMap's Nominatim search API.
+- Implements a proxy endpoint on the backend: `GET /address/search?q=...`
+- Sends a compliant `User-Agent` header (`Califnco-WaterPurifier-App/1.0`).
+- Triggered strictly on explicit user button tap ("Lookup Location") rather than continuous autocomplete keystrokes, adhering strictly to OSM Nominatim Acceptable Use Policy.
+

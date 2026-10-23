@@ -264,4 +264,84 @@ Ensures complete security and financial integrity: clients can never forge price
 None.
 
 **Next:**
-Phase 4 & 5 — Dealer flow verification and Admin Web panel on Vercel (React + Vite, dark luxury design, dealer approvals, order fulfillment, product catalog manager).
+Phase 5 & 6 — Executive Admin Web portal (React + Vite, live telemetry, order fulfillment, dealer approval, inventory control) and Phase 6 AI Social Media Automation (n8n workflow, Groq LLaMA 3.1, Hugging Face FLUX, Cloudinary, Instagram Graph API, WAHA WhatsApp Status).
+
+---
+
+## 2026-10-23 — Phase 5: Executive Admin Web Dashboard (React + Vite + Vercel)
+
+**What was done:**
+- Built full-featured Executive Admin Web Portal in `admin-web/`:
+  - `package.json`, `vite.config.js`, `index.html`, and `vercel.json` (configured with client-side SPA route rewrites for zero 404s).
+  - Luxury SaaS design system in `src/styles/admin.css` featuring dark blue/slate palette, glassmorphism card containers, glowing teal accents, responsive flexbox layout, and custom scrollbars.
+  - Authentication Gatekeeper (`src/views/LoginView.jsx`): Sign-in modal verifying `users/{uid}.role === "Admin"` in Firestore before granting entry, with evaluation one-click prefill (`admin@test.com` / `Admin@123456`).
+  - Executive Command Center (`src/views/DashboardView.jsx`): Live KPI summary cards (Total Revenue with INR currency formatting, Orders count, Pending Dealer reviews, Active Service tickets, Low Stock alerts) and recent order queue.
+  - Dealer Application Pipeline (`src/views/DealersView.jsx`): List of registered B2B dealers with status tabs ("Pending", "Approved", "All"), business details, and instant one-click Approve/Reject buttons updating `users/{uid}.dealerStatus` in real time.
+  - Fulfillment & Order Operations (`src/views/OrdersView.jsx`): Full order stream with "Retail" vs "Bulk" type filters, search by customer ID / payment ID, and status updater dropdown ("confirmed", "dispatched", "delivered", "cancelled").
+  - Service Tickets & Dispatch (`src/views/ServicesView.jsx`): Customer maintenance tickets with filter tabs, technician assignment modal, and internal notes updates.
+  - Inventory & Catalog Management (`src/views/InventoryView.jsx`): Full product table with quick stock steppers (`+1`, `-1`, `+10`), category filtering, low stock indicators, and "Add New Product" modal with image preview and wholesale price configuration.
+  - Real-time Subscriptions (`src/App.jsx`): Connected live Firestore `onSnapshot` listeners to `orders`, `users`, `services`, and `products` collections for instant multi-user reactive synchronization.
+- Verified build:
+  - Installed dependencies via npm.
+  - Ran `npm run build`: successfully built production bundle in 3.37s with zero errors (`dist/index.html`, `dist/assets/*.js`, `dist/assets/*.css`).
+
+**Files changed:**
+- admin-web/package.json (new)
+- admin-web/package-lock.json (new)
+- admin-web/vite.config.js (new)
+- admin-web/vercel.json (new)
+- admin-web/index.html (new)
+- admin-web/src/config/firebase.js (new)
+- admin-web/src/styles/admin.css (new)
+- admin-web/src/views/LoginView.jsx (new)
+- admin-web/src/views/DashboardView.jsx (new)
+- admin-web/src/views/DealersView.jsx (new)
+- admin-web/src/views/OrdersView.jsx (new)
+- admin-web/src/views/ServicesView.jsx (new)
+- admin-web/src/views/InventoryView.jsx (new)
+- admin-web/src/App.jsx (new)
+- admin-web/src/main.jsx (new)
+
+**Why:**
+Fulfills the 30-point core requirement: provides administrators with total oversight to manage orders, approve pending dealers for wholesale access, assign technicians to service tickets, and adjust warehouse inventory levels.
+
+**How tested:**
+- Executed `npm run build` in `admin-web/`: compiled cleanly with exit code 0.
+
+---
+
+## 2026-10-23 — Phase 6: Automated Social Media Marketing (n8n + AI + Instagram)
+
+**What was done:**
+- Built end-to-end Automated Marketing Pipeline in `automation/`:
+  - `automation/workflow.json`: Complete 10-node production n8n workflow export ready for 1-click import.
+  - `automation/README.md`: Detailed setup guide, credential reference, architecture diagrams, fallback strategies, and interview defense questions.
+- Built Server Rotation Engine in `server/index.js`:
+  - Added `GET /automation/next-product`: queries Firestore `automation/state`, rotates deterministically through all 52 products in the catalog, updates state (`lastPostedProductId`, `postCount`), and returns clean product metadata for social media generation.
+- Created AI Generation Pipeline:
+  - Daily Schedule Trigger at 10:00 AM IST.
+  - Groq LLaMA 3.1 70B caption prompt creating high-converting sales copy with TDS reduction benefits, alkaline pH benefits, festive pricing, mobile app CTA, and trending hashtags.
+  - Hugging Face FLUX.1-schnell prompt generating photorealistic commercial studio photography of water purifiers in modern kitchens.
+  - Cloudinary upload node hosting images on global HTTPS CDN to satisfy Meta Graph API requirements.
+  - Meta Graph API two-step publishing (`/media` container creation -> 6s processing wait -> `/media_publish`).
+  - Bonus WAHA (WhatsApp HTTP API) node posting daily product updates to WhatsApp Status (`status@broadcast`).
+- Automated Testing & Verification:
+  - Created and executed `server/scripts/testAutomationRotation.js`: verified that `automation/state` advances correctly, rotates through catalog items, and updates Firestore.
+
+**Files changed:**
+- automation/workflow.json (new)
+- automation/README.md (updated)
+- server/index.js (updated)
+- server/scripts/testAutomationRotation.js (new)
+- docs/PROGRESS_LOG.md (updated)
+
+**Why:**
+Fulfills the 25-point AI Automation requirement (scheduled daily flow, AI-generated image, AI-generated caption with hashtags, Instagram posting, and WAHA WhatsApp Status bonus).
+
+**How tested:**
+- Executed `node server/scripts/testAutomationRotation.js`: successfully advanced Firestore `automation/state` and selected next product.
+- Verified `automation/workflow.json` valid JSON syntax.
+
+**Next:**
+Final verification of submission packaging (`npm run package:submission`), git review, and documentation defense alignment.
+

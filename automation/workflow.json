@@ -1,0 +1,357 @@
+{
+  "name": "Califnco - Daily AI Marketing & Social Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-01",
+      "name": "Daily Schedule Trigger (10:00 AM IST)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.BACKEND_URL || 'https://califnco-server.onrender.com' }}/automation/next-product",
+        "options": {}
+      },
+      "id": "node-fetch-product-02",
+      "name": "Fetch Next Product from Catalog",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an elite copywriter and social media director for Califnco, a high-end water purifier and copper-alkaline RO brand in India. Generate an irresistible Instagram caption for today's featured product. Structure the caption with:\\n1. Catchy attention-grabbing hook\\n2. Three clear bullet points on health benefits (TDS reduction, alkaline pH, mineral boost)\\n3. Retail price with a limited-time festive discount\\n4. Clear call-to-action to download Califnco Mobile App for free doorstep installation\\n5. 8-10 trending water quality and lifestyle hashtags.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Product Name: {{ $json.product.name }}\\nCategory: {{ $json.product.category }}\\nRetail Price: Rs. {{ $json.product.price }}\\nCatalog Description: {{ $json.product.description }}\"\n    }\n  ],\n  \"temperature\": 0.7\n}",
+        "options": {}
+      },
+      "id": "node-ai-caption-03",
+      "name": "Generate AI Caption (Groq LLaMA 3.1)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.HUGGINGFACE_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": \"Ultra-luxurious commercial product photograph of {{ $node['Fetch Next Product from Catalog'].json.product.name }}, modern premium domestic water purifier mounted on an immaculate white marble wall in an upscale minimalist kitchen, pouring crisp pure mineral water into an elegant crystal tumbler, soft cinematic morning light, photorealistic 8k octane render\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "node-ai-image-04",
+      "name": "Generate AI Image (FLUX / Hugging Face)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const product = $('Fetch Next Product from Catalog').first().json.product;\nconst groqResponse = $('Generate AI Caption (Groq LLaMA 3.1)').first().json;\n\nlet caption = \"💧 Experience Pure Hydration with \" + product.name + \"!\\n\\nGet doorstep installation and genuine 10-stage RO purification. Order now on the Califnco Mobile App!\\n\\n#WaterPurifier #AlkalineWater #HealthyLiving #Califnco #PureWater\";\n\nif (groqResponse?.choices && groqResponse.choices[0]?.message?.content) {\n  caption = groqResponse.choices[0].message.content.trim();\n}\n\n// Cloudinary upload setup\nconst fallbackImageUrl = product.imageUrl || \"https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=800\";\n\nreturn [{\n  json: {\n    product: product,\n    caption: caption,\n    shortCaption: caption.slice(0, 300) + \"...\",\n    fallbackImageUrl: fallbackImageUrl\n  }\n}];"
+      },
+      "id": "node-parse-data-05",
+      "name": "Format Caption & Fallbacks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME || 'califnco' }}/image/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "value": "={{ $json.fallbackImageUrl }}"
+            },
+            {
+              "name": "upload_preset",
+              "value": "={{ $env.CLOUDINARY_UPLOAD_PRESET || 'califnco_marketing' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-cloudinary-06",
+      "name": "Upload to Cloudinary (Public CDN)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.secure_url || $node['Format Caption & Fallbacks'].json.fallbackImageUrl }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $node['Format Caption & Fallbacks'].json.caption }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-ig-container-07",
+      "name": "Create Instagram Media Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 6,
+        "unit": "seconds"
+      },
+      "id": "node-wait-08",
+      "name": "Wait for Media Processing",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.INSTAGRAM_BUSINESS_ACCOUNT_ID }}/media_publish",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $node['Create Instagram Media Container'].json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-ig-publish-09",
+      "name": "Publish to Instagram Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WAHA_URL || 'http://localhost:3000' }}/api/sendImage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"session\": \"default\",\n  \"chatId\": \"status@broadcast\",\n  \"file\": {\n    \"url\": \"{{ $node['Upload to Cloudinary (Public CDN)'].json.secure_url || $node['Format Caption & Fallbacks'].json.fallbackImageUrl }}\",\n    \"filename\": \"califnco_daily.jpg\"\n  },\n  \"caption\": \"{{ $node['Format Caption & Fallbacks'].json.shortCaption }}\"\n}",
+        "options": {}
+      },
+      "id": "node-waha-bonus-10",
+      "name": "WhatsApp Status via WAHA (Bonus)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1760,
+        480
+      ]
+    }
+  ],
+  "connections": {
+    "Daily Schedule Trigger (10:00 AM IST)": {
+      "main": [
+        [
+          {
+            "node": "Fetch Next Product from Catalog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Next Product from Catalog": {
+      "main": [
+        [
+          {
+            "node": "Generate AI Caption (Groq LLaMA 3.1)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate AI Image (FLUX / Hugging Face)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate AI Caption (Groq LLaMA 3.1)": {
+      "main": [
+        [
+          {
+            "node": "Format Caption & Fallbacks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate AI Image (FLUX / Hugging Face)": {
+      "main": [
+        [
+          {
+            "node": "Format Caption & Fallbacks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Caption & Fallbacks": {
+      "main": [
+        [
+          {
+            "node": "Upload to Cloudinary (Public CDN)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Cloudinary (Public CDN)": {
+      "main": [
+        [
+          {
+            "node": "Create Instagram Media Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Instagram Media Container": {
+      "main": [
+        [
+          {
+            "node": "Wait for Media Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Media Processing": {
+      "main": [
+        [
+          {
+            "node": "Publish to Instagram Feed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp Status via WAHA (Bonus)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

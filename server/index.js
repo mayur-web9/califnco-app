@@ -389,6 +389,69 @@ app.get("/address/search", async (req, res) => {
   }
 });
 
+// 7. Automation Endpoint: Fetch next product in rotation & advance state
+app.get("/automation/next-product", async (req, res) => {
+  try {
+    const stateRef = db.collection("automation").doc("state");
+    const stateSnap = await stateRef.get();
+    let lastPostedId = null;
+    let postCount = 0;
+    
+    if (stateSnap.exists) {
+      const data = stateSnap.data();
+      lastPostedId = data.lastPostedProductId;
+      postCount = data.postCount || 0;
+    }
+
+    // Get all products sorted by id
+    const productsSnap = await db.collection("products").get();
+    if (productsSnap.empty) {
+      return res.status(404).json({ error: "No products found in catalog" });
+    }
+
+    const allProducts = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Sort deterministically by id
+    allProducts.sort((a, b) => a.id.localeCompare(b.id));
+
+    // Find next product in catalog
+    let nextIndex = 0;
+    if (lastPostedId) {
+      const idx = allProducts.findIndex(p => p.id === lastPostedId);
+      if (idx !== -1) {
+        nextIndex = (idx + 1) % allProducts.length;
+      }
+    }
+
+    const nextProduct = allProducts[nextIndex];
+
+    // Update state doc
+    await stateRef.set({
+      lastPostedProductId: nextProduct.id,
+      lastPostedAt: admin.firestore.FieldValue.serverTimestamp(),
+      postCount: postCount + 1
+    }, { merge: true });
+
+    res.json({
+      success: true,
+      product: {
+        id: nextProduct.id,
+        name: nextProduct.name,
+        category: nextProduct.category,
+        description: nextProduct.description,
+        price: nextProduct.price,
+        rating: nextProduct.rating || 4.8,
+        imageUrl: nextProduct.imageUrl
+      },
+      postIndex: postCount + 1,
+      totalCatalog: allProducts.length
+    });
+  } catch (err) {
+    console.error("Error in /automation/next-product:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch next product" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Califnco backend service listening on port ${PORT}`);
 });
+
