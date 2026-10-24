@@ -1,11 +1,43 @@
-import React from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useState, useRef } from "react";
+import { View, Text, Image, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import colors from "../constants/colors";
 import { formatPrice } from "../utils/formatPrice";
 import { getProductImageSource } from "../constants/productImages";
+import { useCart } from "../hooks/useCart";
 
 export default function ProductCard({ product, onPress, price = null, badge = null }) {
   const displayPrice = price ?? product.price;
+  const { addItem } = useCart();
+  const [justAdded, setJustAdded] = useState(false);
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const floatAnimY = useRef(new Animated.Value(0)).current;
+  const floatAnimOpacity = useRef(new Animated.Value(0)).current;
+
+  const handleQuickAdd = (e) => {
+    e?.stopPropagation?.();
+    addItem(product, 1, displayPrice);
+    setJustAdded(true);
+
+    // Spring button animation
+    Animated.sequence([
+      Animated.timing(btnScale, { toValue: 0.78, duration: 80, useNativeDriver: true }),
+      Animated.spring(btnScale, { toValue: 1, friction: 3, tension: 45, useNativeDriver: true }),
+    ]).start();
+
+    // Floating +1 animation
+    floatAnimY.setValue(0);
+    floatAnimOpacity.setValue(1);
+    Animated.parallel([
+      Animated.timing(floatAnimY, { toValue: -28, duration: 600, useNativeDriver: true }),
+      Animated.sequence([
+        Animated.delay(350),
+        Animated.timing(floatAnimOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+      ]),
+    ]).start();
+
+    setTimeout(() => setJustAdded(false), 1400);
+  };
 
   return (
     <TouchableOpacity style={s.card} onPress={onPress} activeOpacity={0.88}>
@@ -14,6 +46,21 @@ export default function ProductCard({ product, onPress, price = null, badge = nu
           <Text style={s.badgeText}>{badge}</Text>
         </View>
       )}
+
+      {/* Floating +1 feedback badge */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          s.floatingPlus,
+          {
+            transform: [{ translateY: floatAnimY }],
+            opacity: floatAnimOpacity,
+          },
+        ]}
+      >
+        <Text style={s.floatingPlusText}>+1</Text>
+      </Animated.View>
+
       <View style={s.imageContainer}>
         <Image
           source={getProductImageSource(product)}
@@ -28,18 +75,35 @@ export default function ProductCard({ product, onPress, price = null, badge = nu
             <Text style={s.lowStock}>Only {product.stock} left</Text>
           )}
         </View>
-        <Text style={s.name} numberOfLines={3}>{product.name}</Text>
+        <Text style={s.name} numberOfLines={2}>{product.name}</Text>
         <View style={s.footer}>
-          <Text style={s.price}>{formatPrice(displayPrice)}</Text>
-          <View style={s.ratingRow}>
-            <Text style={s.star}>★</Text>
-            <Text style={s.rating}>{product.rating ? Number(product.rating).toFixed(1) : "4.8"}</Text>
+          <View>
+            <Text style={s.price}>{formatPrice(displayPrice)}</Text>
+            <View style={s.ratingRow}>
+              <Text style={s.star}>★</Text>
+              <Text style={s.rating}>{product.rating ? Number(product.rating).toFixed(1) : "4.8"}</Text>
+            </View>
           </View>
+          <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+            <TouchableOpacity
+              style={[s.quickAddBtn, justAdded && s.quickAddBtnSuccess]}
+              onPress={handleQuickAdd}
+              disabled={product.stock === 0}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons
+                name={justAdded ? "check" : "add-shopping-cart"}
+                size={16}
+                color="#ffffff"
+              />
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </View>
     </TouchableOpacity>
   );
 }
+
 
 const s = StyleSheet.create({
   card: {
@@ -153,5 +217,41 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: "#92400e",
     fontWeight: "700"
+  },
+  quickAddBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  quickAddBtnSuccess: {
+    backgroundColor: "#10b981"
+  },
+  floatingPlus: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: "#10b981",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4
+  },
+  floatingPlusText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "900"
   }
 });
