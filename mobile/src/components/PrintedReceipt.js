@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   View, Text, StyleSheet, Animated, Easing, TouchableOpacity,
-  Dimensions, ScrollView, Platform, Share
+  Dimensions, ScrollView, Platform, Share, Alert
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import colors from "../constants/colors";
@@ -258,41 +258,133 @@ export default function PrintedReceipt({
     });
   }
 
-  // Generate and Download PDF Invoice
+  // Generate and Download PDF Invoice via native Print Spooler (supports direct "Save as PDF" & WiFi printing)
   async function handleDownloadPdf() {
     const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Califnco Invoice #${invoiceId}</title>
           <style>
             @media print {
-              body { margin: 0; padding: 20px; font-family: monospace; }
+              body { margin: 0; padding: 20px; }
               .no-print { display: none; }
             }
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; max-width: 480px; margin: auto; padding: 24px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 16px; }
-            .logo { font-size: 24px; font-weight: 900; color: #0a2540; }
-            .sub { font-size: 13px; color: #64748b; margin-top: 4px; }
-            .row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }
-            .label { color: #64748b; font-weight: 600; }
-            .val { font-weight: 700; color: #0f172a; }
-            .amount { font-size: 24px; font-weight: 900; color: #00b4d8; text-align: right; margin: 12px 0; }
-            .status { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; background: #dcfce7; color: #15803d; }
-            .items { margin: 16px 0; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1; padding: 12px 0; }
-            .footer { text-align: center; margin-top: 24px; font-size: 11px; color: #94a3b8; letter-spacing: 1px; }
-            .barcode { font-family: monospace; font-size: 16px; letter-spacing: 4px; font-weight: 900; margin: 8px 0; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+              max-width: 480px;
+              margin: auto;
+              padding: 24px;
+              color: #1e293b;
+              background-color: #ffffff;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px dashed #cbd5e1;
+              padding-bottom: 16px;
+              margin-bottom: 16px;
+            }
+            .logo {
+              font-size: 26px;
+              font-weight: 900;
+              color: #0a2540;
+              letter-spacing: -0.5px;
+            }
+            .sub {
+              font-size: 13px;
+              color: #64748b;
+              margin-top: 4px;
+              font-weight: 600;
+            }
+            .row {
+              display: flex;
+              justify-content: space-between;
+              margin: 8px 0;
+              font-size: 13px;
+            }
+            .label {
+              color: #64748b;
+              font-weight: 600;
+            }
+            .val {
+              font-weight: 700;
+              color: #0f172a;
+            }
+            .val-mono {
+              font-family: monospace;
+              font-weight: 700;
+              color: #0a2540;
+            }
+            .amount {
+              font-size: 24px;
+              font-weight: 900;
+              color: #00b4d8;
+              text-align: right;
+              margin: 12px 0;
+            }
+            .status {
+              display: inline-block;
+              padding: 4px 10px;
+              border-radius: 12px;
+              font-size: 12px;
+              font-weight: 700;
+              text-transform: uppercase;
+              background: #dcfce7;
+              color: #15803d;
+            }
+            .items {
+              margin: 16px 0;
+              border-top: 1px dashed #cbd5e1;
+              border-bottom: 1px dashed #cbd5e1;
+              padding: 12px 0;
+            }
+            .item-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 6px 0;
+              font-size: 13px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 24px;
+              font-size: 11px;
+              color: #94a3b8;
+              letter-spacing: 0.5px;
+              line-height: 1.6;
+            }
+            .barcode {
+              font-family: monospace;
+              font-size: 18px;
+              letter-spacing: 4px;
+              font-weight: 900;
+              margin: 12px 0 6px 0;
+              color: #0a2540;
+            }
+            .stamp {
+              border: 2px solid #10b981;
+              color: #10b981;
+              font-weight: 800;
+              text-transform: uppercase;
+              padding: 4px 8px;
+              border-radius: 4px;
+              display: inline-block;
+              font-size: 11px;
+              letter-spacing: 1px;
+              margin-top: 8px;
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="logo">💧 Califnco</div>
+            <div class="logo">💧 CALIFNCO</div>
             <div class="sub">${title}</div>
             <div class="sub">${subtitle}</div>
           </div>
           <div class="row">
             <span class="label">Invoice ID:</span>
-            <span class="val">#${invoiceId}</span>
+            <span class="val-mono">#${invoiceId}</span>
           </div>
           <div class="row">
             <span class="label">Date & Time:</span>
@@ -312,13 +404,13 @@ export default function PrintedReceipt({
                 ? items
                     .map(
                       (item) => `
-              <div class="row">
-                <span>${item.name} x${item.qty}</span>
+              <div class="item-row">
+                <span><strong>${item.name}</strong> × ${item.qty}</span>
                 <span>Rs. ${Number(item.price * item.qty).toLocaleString("en-IN")}</span>
               </div>`
                     )
                     .join("")
-                : `<div class="row"><span>Standard Purifier / Product Order</span><span>Rs. ${Number(amount).toLocaleString("en-IN")}</span></div>`
+                : `<div class="item-row"><span>Standard Purifier / Product Order</span><span>Rs. ${Number(amount).toLocaleString("en-IN")}</span></div>`
             }
           </div>
           <div class="row" style="align-items: center;">
@@ -327,30 +419,59 @@ export default function PrintedReceipt({
           </div>
           <div class="footer">
             <div class="barcode">|| | ||| || |||| | ||||| | |||</div>
-            <div>VERIFICATION: ${verificationCode}</div>
-            <div>SCAN TO VERIFY AUTHENTICITY • PURE WATER DELIVERED</div>
+            <div>VERIFICATION: <strong>${verificationCode}</strong></div>
+            <div><span class="stamp">VERIFIED OFFICIAL INVOICE</span></div>
+            <div style="margin-top: 8px;">SCAN TO VERIFY AUTHENTICITY • PURE WATER DELIVERED</div>
           </div>
         </body>
       </html>
     `;
 
     try {
+      if (Print && typeof Print.printAsync === "function") {
+        // Direct native Android/iOS print spooler with "Save as PDF" download option
+        await Print.printAsync({ html: htmlContent });
+        return;
+      }
+
+      // Fallback: If printAsync is not available on this platform, try printToFileAsync + sharing
       if (Print && typeof Print.printToFileAsync === "function") {
         const { uri } = await Print.printToFileAsync({ html: htmlContent });
-        if (Sharing && typeof Sharing.shareAsync === "function") {
+        if (Sharing && typeof Sharing.isAvailableAsync === "function" && (await Sharing.isAvailableAsync())) {
           await Sharing.shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
-        } else {
-          await Share.share({ url: uri, title: `Invoice_${invoiceId}` });
+          return;
         }
-      } else {
-        // Fallback native share text
-        await Share.share({
-          message: `Califnco Invoice #${invoiceId}\nAmount: Rs. ${amount}\nStatus: ${status.toUpperCase()}\nDate: ${formatDate(date)}`,
-          title: `Invoice #${invoiceId}`,
-        });
       }
+
+      // Secondary fallback: React Native Share
+      await handleShareText();
     } catch (err) {
-      console.warn("Invoice download error:", err.message);
+      const isCancelled =
+        err?.message?.toLowerCase().includes("cancel") ||
+        err?.message?.toLowerCase().includes("dismiss");
+      if (!isCancelled) {
+        console.warn("Invoice print notice:", err?.message);
+        Alert.alert(
+          "Download Invoice",
+          "Unable to launch native print service on this device. Would you like to share the invoice text summary instead?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Share Summary", onPress: handleShareText },
+          ]
+        );
+      }
+    }
+  }
+
+  // Quick share invoice summary
+  async function handleShareText() {
+    try {
+      await Share.share({
+        message: `💧 Califnco Official Invoice #${invoiceId}\nAmount: Rs. ${Number(amount).toLocaleString("en-IN")}\nStatus: ${status.toUpperCase()}\nDate: ${formatDate(date)}\nCustomer: ${payer?.name || "Customer"}\nAuth Verification: ${verificationCode}\n\nCalifnco Pure Water Delivered.`,
+        title: `Invoice #${invoiceId}`,
+      });
+    } catch (err) {
+      console.warn("Share notice:", err?.message);
     }
   }
 
@@ -368,7 +489,7 @@ export default function PrintedReceipt({
       {/* Action Toolbar Header */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.toolBtn} onPress={handleReplay} activeOpacity={0.75}>
-          <MaterialIcons name="replay" size={18} color="#fff" />
+          <MaterialIcons name="replay" size={17} color="#fff" />
           <Text style={styles.toolBtnText}>Replay</Text>
         </TouchableOpacity>
 
@@ -377,9 +498,14 @@ export default function PrintedReceipt({
           <Text style={styles.toolBtnText}>Download PDF</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.toolBtn} onPress={handleShareText} activeOpacity={0.75}>
+          <MaterialIcons name="share" size={17} color="#fff" />
+          <Text style={styles.toolBtnText}>Share</Text>
+        </TouchableOpacity>
+
         {onClose && (
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <MaterialIcons name="close" size={22} color="#fff" />
+            <MaterialIcons name="close" size={20} color="#fff" />
           </TouchableOpacity>
         )}
       </View>
@@ -540,16 +666,19 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "center",
+    gap: 8,
     marginBottom: 16,
+    flexWrap: "wrap",
+    paddingHorizontal: 8,
   },
   toolBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "rgba(255,255,255,0.18)",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
