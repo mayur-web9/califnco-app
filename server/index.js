@@ -219,10 +219,7 @@ app.post("/payment/verify", requireAuth, async (req, res) => {
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
-    const isSignatureValid =
-      razorpay_signature === expectedSignature ||
-      razorpay_signature === "pay_test_simulated_sig" ||
-      razorpay_signature === "test_signature";
+    const isSignatureValid = razorpay_signature === expectedSignature;
 
     if (!isSignatureValid) {
       return res.status(400).json({ success: false, error: "Invalid payment signature. Payment rejected." });

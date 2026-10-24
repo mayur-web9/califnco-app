@@ -135,19 +135,6 @@ export default function CheckoutScreen({ navigation }) {
     }
   }
 
-  // Fast direct test checkout for seamless testing
-  async function startInstantTestPayment() {
-    if (items.length === 0) {
-      Alert.alert("Your Cart is Empty", "Please browse our catalog and add purifiers or cartridges to checkout.");
-      return;
-    }
-    if (!validateAddress()) return;
-    const testOrderId = "order_demo_" + Date.now();
-    const testPaymentId = "pay_demo_" + Date.now();
-    const testSignature = "pay_test_simulated_sig";
-    await verifyAndSaveOrder(testOrderId, testPaymentId, testSignature);
-  }
-
   // Step 2: Handle message posted back from Razorpay Checkout WebView
   async function handleWebViewMessage(event) {
     try {
@@ -156,19 +143,24 @@ export default function CheckoutScreen({ navigation }) {
       if (msg.type === "DISMISSED") {
         setShowWebView(false);
         setCheckoutData(null);
+        Alert.alert("Payment Cancelled", "Transaction was cancelled by user.");
         return;
       }
 
       if (msg.type === "FAILED") {
         setShowWebView(false);
         setCheckoutData(null);
-        Alert.alert("Payment Notice", msg.error || "Transaction was not completed.");
+        Alert.alert("Payment Failed", msg.error || "Payment failed or cancelled.");
         return;
       }
 
       if (msg.type === "SUCCESS") {
         setShowWebView(false);
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = msg.payload;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = msg.payload || {};
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+          Alert.alert("Payment Verification Error", "Payment was not signed by Razorpay. Order was not created.");
+          return;
+        }
         await verifyAndSaveOrder(razorpay_order_id, razorpay_payment_id, razorpay_signature);
       }
     } catch (err) {
@@ -287,9 +279,8 @@ export default function CheckoutScreen({ navigation }) {
             </div>
 
             <button class="btn" onclick="openRazorpay()">💳 Pay with Razorpay Gateway</button>
-            <button class="btn btn-sim" onclick="simulateTestSuccess()">⚡ Instant Confirm Test Payment ✓</button>
             <button class="btn btn-cancel" onclick="cancelCheckout()">Cancel and Return</button>
-            <div class="hint">Test mode: Use UPI/Cards or Instant Confirm to test the entire verified order flow.</div>
+            <div class="hint">Razorpay Sandbox: Enter test card or UPI details to complete payment.</div>
           </div>
 
           <script>
@@ -307,12 +298,19 @@ export default function CheckoutScreen({ navigation }) {
                 },
                 theme: { color: "#0a2540" },
                 handler: function(response) {
+                  if (!response || !response.razorpay_signature) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                      type: "FAILED",
+                      error: "Payment was not signed by Razorpay."
+                    }));
+                    return;
+                  }
                   window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: "SUCCESS",
                     payload: {
-                      razorpay_order_id: response.razorpay_order_id || "${checkoutData.orderId}",
-                      razorpay_payment_id: response.razorpay_payment_id || ("pay_test_" + Date.now()),
-                      razorpay_signature: response.razorpay_signature || "pay_test_simulated_sig"
+                      razorpay_order_id: response.razorpay_order_id,
+                      razorpay_payment_id: response.razorpay_payment_id,
+                      razorpay_signature: response.razorpay_signature
                     }
                   }));
                 },
@@ -337,17 +335,6 @@ export default function CheckoutScreen({ navigation }) {
               } catch(e) {
                 alert("Notice: " + e.message);
               }
-            }
-
-            function simulateTestSuccess() {
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: "SUCCESS",
-                payload: {
-                  razorpay_order_id: "${checkoutData.orderId}",
-                  razorpay_payment_id: "pay_test_" + Date.now(),
-                  razorpay_signature: "pay_test_simulated_sig"
-                }
-              }));
             }
 
             function cancelCheckout() {
@@ -423,10 +410,6 @@ export default function CheckoutScreen({ navigation }) {
             ? <ActivityIndicator color="#fff" />
             : <Text style={s.placeBtnText}>Proceed to Pay {formatPrice(total)}</Text>
           }
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.testPlaceBtn} onPress={startInstantTestPayment} disabled={loading}>
-          <Text style={s.testPlaceBtnText}>⚡ Fast Test Checkout (Instant Demo)</Text>
         </TouchableOpacity>
       </View>
 
