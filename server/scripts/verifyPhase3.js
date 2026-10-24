@@ -139,12 +139,33 @@ async function runTests() {
   }, custToken);
   assert(invalidVerify.status === 400, "Invalid signature rejected with 400 Bad Request");
 
-  // B) Valid signature test
+  // B) Unknown razorpay_order_id test (returns 404)
+  const unknownOrderId = "order_unknown_" + Date.now();
+  const unknownSig = crypto.createHmac("sha256", secret).update(`${unknownOrderId}|${paymentId}`).digest("hex");
+  const unknownVerify = await postJson("/payment/verify", {
+    razorpay_order_id: unknownOrderId,
+    razorpay_payment_id: paymentId,
+    razorpay_signature: unknownSig,
+    address: { line1: "123 Main St", city: "Bengaluru", state: "KA", pincode: "560001" }
+  }, custToken);
+  assert(unknownVerify.status === 404, "Unknown razorpay_order_id rejected with 404 Not Found");
+
+  // C) Wrong UID test (returns 403)
+  const wrongUserSig = crypto.createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
+  const wrongUserVerify = await postJson("/payment/verify", {
+    razorpay_order_id: orderId,
+    razorpay_payment_id: paymentId,
+    razorpay_signature: wrongUserSig,
+    address: { line1: "123 Main St", city: "Bengaluru", state: "KA", pincode: "560001" }
+  }, approvedDealerToken);
+  assert(wrongUserVerify.status === 403, "Wrong user ID attempting verification rejected with 403 Forbidden");
+
+  // D) Valid signature test with TAMPERED items in body (must be ignored by server)
   const validVerify = await postJson("/payment/verify", {
     razorpay_order_id: orderId,
     razorpay_payment_id: paymentId,
     razorpay_signature: validSignature,
-    items: [{ productId: "prod_purifier_01", qty: 2 }],
+    items: [{ productId: "prod_purifier_01", qty: 9999, price: 1 }], // Tampered client items
     address: { line1: "123 Main St", city: "Bengaluru", state: "KA", pincode: "560001" }
   }, custToken);
 
@@ -152,11 +173,13 @@ async function runTests() {
   assert(validVerify.data.success === true, "Verification returned success: true");
   assert(validVerify.data.status === "confirmed", "Order created with status: 'confirmed'");
   assert(validVerify.data.orderId.length > 0, `Order created in Firestore via Admin SDK: ${validVerify.data.orderId}`);
+  assert(validVerify.data.total === 29998, "Tampered items in body had zero effect; server used its stored record (Rs. 29998)");
 
-  // C) Verify order exists in Firestore with correct server-computed values
+  // E) Verify order exists in Firestore with correct server-stored values
   const savedOrderDoc = await db.collection("orders").doc(validVerify.data.orderId).get();
   assert(savedOrderDoc.exists, "Order document exists in Firestore");
   assert(savedOrderDoc.data().total === 29998, `Order total in Firestore is server-computed Rs. ${savedOrderDoc.data().total}`);
+  assert(savedOrderDoc.data().items.length === 1 && savedOrderDoc.data().items[0].qty === 2, "Items in Firestore match server-stored record (qty 2, not tampered 9999)");
   assert(savedOrderDoc.data().paymentId === paymentId, "Order contains verified paymentId");
   assert(savedOrderDoc.data().type === "retail", "Order type is 'retail'");
 

@@ -162,6 +162,17 @@ app.post("/payment/create-order", requireAuth, async (req, res) => {
       rzpOrderId = "order_test_" + Date.now();
     }
 
+    // Store server-side record to prevent client tampering
+    await db.collection("payment_orders").doc(rzpOrderId).set({
+      razorpayOrderId: rzpOrderId,
+      uid: userId,
+      items: verifiedItems,
+      amount: amountInPaise,
+      totalRupees: computedTotal,
+      status: "created",
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
     res.json({
       orderId: rzpOrderId,
       amount: amountInPaise,
@@ -184,12 +195,11 @@ app.post("/payment/verify", requireAuth, async (req, res) => {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      items,
       address
     } = req.body;
     const userId = req.user.uid;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !items) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ error: "Missing required verification fields" });
     }
 
@@ -225,25 +235,20 @@ app.post("/payment/verify", requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: "Invalid payment signature. Payment rejected." });
     }
 
-    // 3. Recompute total and line items from Firestore (tamper-proof)
-    let total = 0;
-    const verifiedItems = [];
-
-    for (const item of items) {
-      const prodDoc = await db.collection("products").doc(item.productId).get();
-      if (prodDoc.exists) {
-        const prod = prodDoc.data();
-        const price = Number(prod.price);
-        total += price * Number(item.qty);
-        verifiedItems.push({
-          productId: item.productId,
-          name: prod.name,
-          imageUrl: prod.imageUrl || "",
-          price,
-          qty: Number(item.qty)
-        });
-      }
+    // 3. Load server-side payment record (NEVER TRUST CLIENT ITEMS)
+    const paymentOrderDoc = await db.collection("payment_orders").doc(razorpay_order_id).get();
+    if (!paymentOrderDoc.exists) {
+      return res.status(404).json({ error: "Unknown razorpay_order_id. No server payment record found." });
     }
+
+    const paymentOrder = paymentOrderDoc.data();
+    if (paymentOrder.uid !== userId) {
+      return res.status(403).json({ error: "Forbidden: Order belongs to another user" });
+    }
+
+    // Build order ONLY from server-side record (ignoring any items in req.body)
+    const verifiedItems = paymentOrder.items;
+    const total = paymentOrder.totalRupees || (paymentOrder.amount / 100);
 
     // 4. ATOMIC FIRESTORE TRANSACTION: Read and verify stock, decrement stock, and write order
     const orderRef = db.collection("orders").doc();
@@ -281,6 +286,12 @@ app.post("/payment/verify", requireAuth, async (req, res) => {
         total,
         address: address || {},
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(paymentOrderDoc.ref, {
+        status: "verified",
+        paymentId: razorpay_payment_id,
+        orderId: orderRef.id,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
     });

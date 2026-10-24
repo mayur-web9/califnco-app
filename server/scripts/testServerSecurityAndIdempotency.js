@@ -159,8 +159,21 @@ async function runSecurityAndIdempotencyTests() {
   // 5. Idempotent /payment/verify
   console.log("\n5. Testing Idempotent /payment/verify...");
   const uniquePayId = `pay_idempotent_${Date.now()}`;
-  const mockOrderId = `order_${Date.now()}`;
   const razorpaySecret = process.env.RAZORPAY_KEY_SECRET || "rzp_test_secret_placeholder";
+
+  // Create real order session in payment_orders
+  const createOrder1 = await fetch(`${SERVER_URL}/payment/create-order`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${customerToken}`
+    },
+    body: JSON.stringify({
+      items: [{ productId: "prod_purifier_02", qty: 1 }]
+    })
+  });
+  const createData1 = await createOrder1.json();
+  const mockOrderId = createData1.orderId;
 
   const validSig = crypto
     .createHmac("sha256", razorpaySecret)
@@ -226,8 +239,21 @@ async function runSecurityAndIdempotencyTests() {
   const initialSnap = await db.collection("products").doc(targetProdId).get();
   const initialStock = Number(initialSnap.data().stock);
 
+  // Create session for transaction order
+  const createOrder2 = await fetch(`${SERVER_URL}/payment/create-order`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${customerToken}`
+    },
+    body: JSON.stringify({
+      items: [{ productId: targetProdId, qty: 2 }]
+    })
+  });
+  const createData2 = await createOrder2.json();
+  const txOrderId = createData2.orderId;
+
   const txPayId = `pay_tx_${Date.now()}`;
-  const txOrderId = `order_tx_${Date.now()}`;
   const txSig = crypto
     .createHmac("sha256", razorpaySecret)
     .update(`${txOrderId}|${txPayId}`)
@@ -256,8 +282,20 @@ async function runSecurityAndIdempotencyTests() {
 
   // 7. Transaction Rollback when requesting more than available stock
   console.log("\n7. Testing Transaction Rejection & Rollback on Insufficient Stock...");
+  const createOrder3 = await fetch(`${SERVER_URL}/payment/create-order`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${customerToken}`
+    },
+    body: JSON.stringify({
+      items: [{ productId: targetProdId, qty: 999999 }]
+    })
+  });
+  const createData3 = await createOrder3.json();
+  const excessiveOrderId = createData3.orderId;
+
   const excessivePayId = `pay_excess_${Date.now()}`;
-  const excessiveOrderId = `order_excess_${Date.now()}`;
   const excessiveSig = crypto
     .createHmac("sha256", razorpaySecret)
     .update(`${excessiveOrderId}|${excessivePayId}`)
