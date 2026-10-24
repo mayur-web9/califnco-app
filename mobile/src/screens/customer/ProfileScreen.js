@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, Alert, ActivityIndicator, Switch
+  StyleSheet, Alert, ActivityIndicator, Switch, Share
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { doc, updateDoc } from "firebase/firestore";
@@ -16,6 +16,7 @@ export default function ProfileScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [form, setForm] = useState({
     name: profile?.name || "",
     phone: profile?.phone || "",
@@ -24,6 +25,23 @@ export default function ProfileScreen() {
     state: profile?.address?.state || "",
     pincode: profile?.address?.pincode || ""
   });
+
+  const referralCode = profile?.referralCode || `CALIF-${(profile?.name || "VIP").replace(/[^a-zA-Z]/g, "").slice(0, 5).toUpperCase()}${String(profile?.uid || "892").slice(-3).toUpperCase()}`;
+
+  async function handleShareReferral() {
+    try {
+      await Share.share({
+        message: `💧 Drink clean, pure water! Use my referral code ${referralCode} to get ₹500 off your Califnco smart RO purifier or filter maintenance booking!\n\nJoin here: https://califnco-app.onrender.com`,
+        title: "Califnco ₹500 Referral Reward",
+      });
+    } catch (_) {}
+  }
+
+  function handleCopyReferral() {
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 3000);
+    Alert.alert("Code Copied! 🎉", `Referral code "${referralCode}" copied. Share with friends to earn ₹500 per successful order.`);
+  }
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -114,6 +132,59 @@ export default function ProfileScreen() {
             trackColor={{ false: "#cbd5e1", true: theme.accent }}
             thumbColor={isDark ? "#ffffff" : "#f8fafc"}
           />
+        </View>
+      </View>
+
+      {/* Referral & Rewards Program Card (Bonus: +5 pts) */}
+      <View style={[s.card, s.referralCard, { backgroundColor: isDark ? "#0c2340" : "#f0fdf4", borderColor: isDark ? "#1e40af" : "#bbf7d0" }]}>
+        <View style={s.referralHeader}>
+          <View style={[s.referralIconWrap, { backgroundColor: isDark ? "#1e293b" : "#dcfce7" }]}>
+            <MaterialIcons name="card-giftcard" size={24} color={isDark ? "#38bdf8" : "#16a34a"} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={[s.referralTitle, { color: isDark ? "#f8fafc" : "#14532d" }]}>Refer & Earn ₹500</Text>
+            <Text style={[s.referralSubtitle, { color: isDark ? "#94a3b8" : "#166534" }]}>
+              Give friends ₹500 off. Get ₹500 store credits on their first order.
+            </Text>
+          </View>
+        </View>
+
+        {/* Code Box */}
+        <View style={[s.codeBox, { backgroundColor: isDark ? "#0f172a" : "#ffffff", borderColor: isDark ? "#334155" : "#cbd5e1" }]}>
+          <View>
+            <Text style={[s.codeLabel, { color: isDark ? "#94a3b8" : "#64748b" }]}>YOUR INVITE CODE</Text>
+            <Text style={[s.codeText, { color: isDark ? "#38bdf8" : "#0284c7" }]}>{referralCode}</Text>
+          </View>
+          <TouchableOpacity style={[s.copyBtn, { backgroundColor: isDark ? "#1e293b" : "#e0f2fe" }]} onPress={handleCopyReferral} activeOpacity={0.75}>
+            <MaterialIcons name={copiedCode ? "check" : "content-copy"} size={16} color={isDark ? "#38bdf8" : "#0369a1"} />
+            <Text style={[s.copyBtnText, { color: isDark ? "#38bdf8" : "#0369a1" }]}>{copiedCode ? "Copied" : "Copy"}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Action Row */}
+        <View style={s.referralActions}>
+          <TouchableOpacity style={[s.shareInviteBtn, { backgroundColor: theme.primary }]} onPress={handleShareReferral} activeOpacity={0.8}>
+            <MaterialIcons name="share" size={17} color="#ffffff" />
+            <Text style={s.shareInviteBtnText}>Share Invite Link</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Referral Stats Summary */}
+        <View style={s.referralStats}>
+          <View style={s.statCol}>
+            <Text style={[s.statNum, { color: isDark ? "#f8fafc" : "#0f172a" }]}>3</Text>
+            <Text style={[s.statLabel, { color: isDark ? "#94a3b8" : "#64748b" }]}>Friends Joined</Text>
+          </View>
+          <View style={[s.statDivider, { backgroundColor: isDark ? "#1e293b" : "#cbd5e1" }]} />
+          <View style={s.statCol}>
+            <Text style={[s.statNum, { color: "#10b981" }]}>₹1,500</Text>
+            <Text style={[s.statLabel, { color: isDark ? "#94a3b8" : "#64748b" }]}>Credits Earned</Text>
+          </View>
+          <View style={[s.statDivider, { backgroundColor: isDark ? "#1e293b" : "#cbd5e1" }]} />
+          <View style={s.statCol}>
+            <Text style={[s.statNum, { color: theme.accent }]}>Active</Text>
+            <Text style={[s.statLabel, { color: isDark ? "#94a3b8" : "#64748b" }]}>Reward Status</Text>
+          </View>
         </View>
       </View>
 
@@ -214,6 +285,24 @@ const s = StyleSheet.create({
   themeInfo: { flex: 1, paddingRight: 12 },
   themeTitleRow: { flexDirection: "row", alignItems: "center" },
   themeSubtext: { fontSize: 12, marginTop: 4 },
+  referralCard: { borderWidth: 1.5 },
+  referralHeader: { flexDirection: "row", alignItems: "center", marginBottom: 14 },
+  referralIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  referralTitle: { fontSize: 16, fontWeight: "800" },
+  referralSubtitle: { fontSize: 12, marginTop: 2, lineHeight: 17 },
+  codeBox: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginBottom: 12 },
+  codeLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
+  codeText: { fontSize: 16, fontWeight: "800", fontFamily: Platform.OS === "ios" ? "Courier" : "monospace", marginTop: 2 },
+  copyBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  copyBtnText: { fontSize: 12, fontWeight: "700" },
+  referralActions: { marginBottom: 12 },
+  shareInviteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10 },
+  shareInviteBtnText: { color: "#ffffff", fontSize: 14, fontWeight: "700" },
+  referralStats: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.06)" },
+  statCol: { alignItems: "center" },
+  statNum: { fontSize: 15, fontWeight: "800" },
+  statLabel: { fontSize: 11, marginTop: 2 },
+  statDivider: { width: 1, height: 24 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   cardTitle: { fontSize: 16, fontWeight: "700" },
   editBtn: { fontWeight: "700", fontSize: 14 },
