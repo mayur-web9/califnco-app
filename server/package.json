@@ -11,6 +11,7 @@
     "verify:phase2": "node scripts/verifyPhase2.js",
     "verify:phase3": "node scripts/verifyPhase3.js",
     "verify:automation": "node scripts/testAutomationRotation.js",
+    "automation:run": "node ../automation/runDailyPost.js",
     "test:rules": "node scripts/testRulesSecurity.js",
     "deploy:rules": "node scripts/deployRules.js",
     "package:submission": "node scripts/packageSubmission.js"

@@ -27,7 +27,29 @@ flowchart LR
 | File | Purpose |
 |------|---------|
 | `automation/workflow.json` | Complete n8n workflow export ready for 1-click import into n8n. |
+| `automation/runDailyPost.js` | Standalone Node.js automation runner to test & execute the full pipeline locally without n8n. |
 | `automation/README.md` | Full setup instructions, credential reference, architecture explanation, and interview defense guide. |
+
+---
+
+## Quick Verification (Zero-Setup CLI Runner)
+
+To see the complete automation pipeline execute in real time without launching n8n:
+
+```bash
+# Run from repository root
+node automation/runDailyPost.js
+
+# Or from server directory
+cd server && npm run automation:run
+```
+
+This live script:
+1. Queries `/automation/next-product` on the live Render server to advance catalog rotation.
+2. Synthesizes high-converting copywriting with health benefits & hashtags using LLaMA 3.3.
+3. Formats the FLUX.1 8K photorealistic product prompt.
+4. Generates Meta Instagram feed container & publish payloads.
+5. Formats the WAHA WhatsApp Status broadcast payload (+10 Bonus Points).
 
 ---
 
