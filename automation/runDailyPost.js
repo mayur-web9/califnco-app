@@ -16,6 +16,21 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
+
+// Load .env files if present
+['../server/.env', '.env', 'server/.env'].forEach(rel => {
+  const p = path.resolve(__dirname, rel);
+  if (fs.existsSync(p)) {
+    const lines = fs.readFileSync(p, 'utf-8').split('\n');
+    lines.forEach(line => {
+      const match = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)?\s*$/);
+      if (match && !process.env[match[1]]) {
+        process.env[match[1]] = match[2].trim().replace(/^["']|["']$/g, '');
+      }
+    });
+  }
+});
 
 // Helper for HTTP requests
 function httpRequest(url, options = {}, postData = null) {
@@ -146,15 +161,65 @@ async function runAutomation() {
 
   // Step 4: Cloudinary Public HTTPS Asset Hosting
   console.log('\n▶ [Step 4/6] Cloudinary CDN Media Preparation...');
-  console.log(`  ✓ Image validated: HTTPS compliant, 1:1 aspect ratio ready for Meta Crawler.`);
-  console.log(`  ✓ CDN Asset URL: ${finalImageUrl}`);
+  let cdnImageUrl = finalImageUrl;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (cloudName && apiKey && apiSecret) {
+    try {
+      console.log(`  • Connecting to Cloudinary account: ${cloudName} (Signed HMAC SHA-1)...`);
+      const imgRes = await fetch(finalImageUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (imgRes.ok) {
+        const ab = await imgRes.arrayBuffer();
+        const base64Img = `data:image/jpeg;base64,${Buffer.from(ab).toString('base64')}`;
+        const timestamp = Math.round(Date.now() / 1000);
+        const folder = 'califnco_marketing';
+        const toSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+        const signature = crypto.createHash('sha1').update(toSign).digest('hex');
+
+        const uploadBody = JSON.stringify({
+          file: base64Img,
+          folder: folder,
+          api_key: apiKey,
+          timestamp: timestamp,
+          signature: signature
+        });
+
+        const uploadRes = await httpRequest(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(uploadBody)
+          }
+        }, uploadBody);
+
+        if (uploadRes.status === 200 && uploadRes.data && uploadRes.data.secure_url) {
+          cdnImageUrl = uploadRes.data.secure_url;
+          console.log(`  ✓ LIVE CLOUDINARY UPLOAD SUCCESSFUL!`);
+          console.log(`  ✓ Secure CDN URL: ${cdnImageUrl}`);
+          console.log(`  ✓ Dimensions:     ${uploadRes.data.width}x${uploadRes.data.height} px`);
+        } else {
+          console.log(`  ⚠ Cloudinary API returned status ${uploadRes.status}. Using high-res fallback.`);
+        }
+      }
+    } catch (e) {
+      console.log(`  ⚠ Cloudinary live upload error: ${e.message}. Using fallback CDN asset.`);
+    }
+  } else {
+    console.log(`  ✓ Image validated: HTTPS compliant, 1:1 aspect ratio ready for Meta Crawler.`);
+    console.log(`  ✓ CDN Asset URL: ${cdnImageUrl}`);
+  }
 
   // Step 5: Meta Graph API (Instagram Content Publishing)
   console.log('\n▶ [Step 5/6] Meta Graph API Payload Generation (Instagram Feed)...');
   const igContainerPayload = {
     endpoint: 'POST https://graph.facebook.com/v19.0/{instagram_business_account_id}/media',
     parameters: {
-      image_url: finalImageUrl,
+      image_url: cdnImageUrl,
       caption: caption,
       access_token: 'EAABwz...[SECURE_META_PAGE_TOKEN]'
     }
@@ -182,7 +247,7 @@ async function runAutomation() {
       session: 'default',
       chatId: 'status@broadcast',
       file: {
-        url: finalImageUrl,
+        url: cdnImageUrl,
         filename: `${product.id}_daily.jpg`
       },
       caption: shortStatusCaption
