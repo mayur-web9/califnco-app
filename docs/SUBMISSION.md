@@ -65,18 +65,22 @@ Use the following Razorpay test credentials when verifying the tamper-proof chec
    - `server/scripts/testFcmAndServicePush.js`: **9/9 PASSED**.
    - Native device FCM push token registration in `users/{uid}.fcmToken`.
    - Real-time FCM push notification triggers on order status changes (`PATCH /orders/:id/status`) and service request updates (`PATCH /services/:id/status`).
-4. **Mobile Features**:
+4. **Mobile Features & Polish**:
    - **Dark Mode**: Persistent dark obsidian theme with instant toggle switch in `ProfileScreen.js` backed by `AsyncStorage`.
    - **Pinch-to-Zoom**: Fullscreen product image viewer in `ProductDetailScreen.js` with multi-touch pinch zoom (up to 4x).
+   - **Referral & Rewards System Card**: Added in `ProfileScreen.js` ("Refer & Earn ₹500", custom referral code, tap-to-copy, direct native sharing, rewards tracking) for the +5 App Polish bonus.
+   - **Animated Invoice Preview & Native Printing**: Reusable `PrintedReceipt.js` component with native OS print spooler ("Save as PDF", direct Wi-Fi printing) and share action.
    - **Dealer Flow**: Automatic routing between Retail Catalog, Pending Approval Screen, and Wholesale B2B Bulk Order Screen.
 5. **Admin Web Portal**:
    - Real-time Firestore synchronization for orders, inventory, wholesale pricing, dealer approvals, and service tickets.
    - Dark/Light mode theme toggle.
    - Clean authentication with zero pre-filled hardcoded credentials.
-6. **AI & Social Automation**:
+6. **AI & Social Automation (25 pts + 10 Bonus pts)**:
    - Automated product promotion workflow (`automation/workflow.json`).
+   - Standalone CLI automation runner (`node automation/runDailyPost.js` or `npm run automation:run`) for 1-command verification without setting up n8n.
    - Groq AI copywriting with supported `llama-3.3-70b-versatile` model.
    - Image generation with Hugging Face Serverless Router (`FLUX.1-schnell`).
+   - WhatsApp Status broadcast via WAHA container integration (+10 bonus points).
 
 ---
 
