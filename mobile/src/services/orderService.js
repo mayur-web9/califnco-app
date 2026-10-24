@@ -1,7 +1,7 @@
 import { db, auth } from "../config/firebase";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001";
+const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "https://califnco-app.onrender.com";
 
 async function getAuthHeaders() {
   const token = await auth.currentUser?.getIdToken();

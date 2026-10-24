@@ -12,20 +12,30 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const prof = await getUserProfile(firebaseUser.uid);
-        setUser(firebaseUser);
-        setProfile(prof);
-        // Register native device push token and persist to users/{uid}.fcmToken
-        registerForPushNotificationsAsync(firebaseUser.uid).catch(err => {
-          console.warn("FCM push registration warning:", err.message);
-        });
-      } else {
+      try {
+        if (firebaseUser) {
+          const prof = await getUserProfile(firebaseUser.uid);
+          setUser(firebaseUser);
+          setProfile(prof);
+          registerForPushNotificationsAsync(firebaseUser.uid).catch(err => {
+            console.warn("FCM push registration warning:", err?.message);
+          });
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+      } catch (err) {
+        console.warn("Auth state change error:", err?.message);
         setUser(null);
         setProfile(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return unsub;
   }, []);

@@ -12,6 +12,7 @@
         "backgroundColor": "#0a2540"
       },
       "package": "com.califnco.app",
+      "versionCode": 2,
       "googleServicesFile": "./google-services.json"
     },
     "plugins": [
