@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Alert } from "react-native";
 import { useCart } from "../../hooks/useCart";
 import { formatPrice } from "../../utils/formatPrice";
+import { getProductImageSource } from "../../constants/productImages";
 import colors from "../../constants/colors";
 
 export default function CartScreen({ navigation }) {
@@ -28,7 +29,7 @@ export default function CartScreen({ navigation }) {
         contentContainerStyle={s.list}
         renderItem={({ item }) => (
           <View style={s.item}>
-            <Image source={{ uri: item.imageUrl }} style={s.thumb} resizeMode="cover" />
+            <Image source={getProductImageSource(item)} style={s.thumb} resizeMode="contain" />
             <View style={s.details}>
               <Text style={s.name} numberOfLines={2}>{item.name}</Text>
               <Text style={s.unitPrice}>{formatPrice(item.price)} each</Text>

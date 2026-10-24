@@ -8,6 +8,8 @@ import { CATEGORIES } from "../../constants/categories";
 import ProductCard from "../../components/ProductCard";
 import colors from "../../constants/colors";
 
+import { SkeletonCatalogHeader, SkeletonProductGrid } from "../../components/Skeleton";
+
 export default function CatalogScreen({ navigation }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,8 +38,9 @@ export default function CatalogScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={s.container}>
+        <SkeletonCatalogHeader />
+        <SkeletonProductGrid count={6} />
       </View>
     );
   }

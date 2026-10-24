@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, Easing } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import colors from "../constants/colors";
 import { formatPrice } from "../utils/formatPrice";
@@ -13,6 +13,12 @@ export default function ProductCard({ product, onPress, price = null, badge = nu
   const btnScale = useRef(new Animated.Value(1)).current;
   const floatAnimY = useRef(new Animated.Value(0)).current;
   const floatAnimOpacity = useRef(new Animated.Value(0)).current;
+
+  // Flying product animation values
+  const flyX = useRef(new Animated.Value(0)).current;
+  const flyY = useRef(new Animated.Value(0)).current;
+  const flyScale = useRef(new Animated.Value(1)).current;
+  const flyOpacity = useRef(new Animated.Value(0)).current;
 
   const handleQuickAdd = (e) => {
     e?.stopPropagation?.();
@@ -36,6 +42,40 @@ export default function ProductCard({ product, onPress, price = null, badge = nu
       ]),
     ]).start();
 
+    // Flying product thumbnail to cart effect
+    flyX.setValue(0);
+    flyY.setValue(0);
+    flyScale.setValue(1);
+    flyOpacity.setValue(1);
+
+    Animated.parallel([
+      Animated.timing(flyX, {
+        toValue: 45,
+        duration: 700,
+        easing: Easing.bezier(0.2, 0.8, 0.2, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(flyY, {
+        toValue: -130,
+        duration: 700,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(flyScale, {
+        toValue: 0.3,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.delay(450),
+        Animated.timing(flyOpacity, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
     setTimeout(() => setJustAdded(false), 1400);
   };
 
@@ -46,6 +86,28 @@ export default function ProductCard({ product, onPress, price = null, badge = nu
           <Text style={s.badgeText}>{badge}</Text>
         </View>
       )}
+
+      {/* Flying Product Clone to Cart */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          s.flyingClone,
+          {
+            opacity: flyOpacity,
+            transform: [
+              { translateX: flyX },
+              { translateY: flyY },
+              { scale: flyScale },
+            ],
+          },
+        ]}
+      >
+        <Image
+          source={getProductImageSource(product)}
+          style={s.flyingImage}
+          resizeMode="contain"
+        />
+      </Animated.View>
 
       {/* Floating +1 feedback badge */}
       <Animated.View
@@ -253,5 +315,26 @@ const s = StyleSheet.create({
     color: "#ffffff",
     fontSize: 11,
     fontWeight: "900"
+  },
+  flyingClone: {
+    position: "absolute",
+    top: 30,
+    left: "25%",
+    width: 60,
+    height: 60,
+    zIndex: 99,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  flyingImage: {
+    width: 48,
+    height: 48,
   }
 });

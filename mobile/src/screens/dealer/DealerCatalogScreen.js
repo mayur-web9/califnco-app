@@ -8,6 +8,7 @@ import { CATEGORIES } from "../../constants/categories";
 import { useAuth } from "../../hooks/useAuth";
 import { placeBulkOrder } from "../../services/orderService";
 import ProductCard from "../../components/ProductCard";
+import { SkeletonCatalogHeader, SkeletonProductGrid } from "../../components/Skeleton";
 import { formatPrice } from "../../utils/formatPrice";
 import colors from "../../constants/colors";
 
@@ -93,8 +94,13 @@ export default function DealerCatalogScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={s.container}>
+        <View style={s.banner}>
+          <Text style={s.bannerTitle}>🏢 B2B Wholesale Portal</Text>
+          <Text style={s.bannerSub}>Tier-1 Verified Dealer Pricing Enabled</Text>
+        </View>
+        <SkeletonCatalogHeader />
+        <SkeletonProductGrid count={6} />
       </View>
     );
   }

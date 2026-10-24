@@ -8,12 +8,17 @@ import { createServiceBooking, getUserServiceBookings } from "../../services/ser
 import { formatDate, statusColor } from "../../utils/formatPrice";
 import colors from "../../constants/colors";
 
+import { SkeletonServiceItem } from "../../components/Skeleton";
+import SuccessModal from "../../components/SuccessModal";
+
 export default function ServiceBookingScreen() {
   const { profile } = useAuth();
   const [tab, setTab] = useState("new"); // "new" | "history"
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [submittedTicketId, setSubmittedTicketId] = useState("");
   const [form, setForm] = useState({
     phone: profile?.phone || "",
     address: profile?.address ? `${profile.address.line1}, ${profile.address.city}` : "",
@@ -22,32 +27,36 @@ export default function ServiceBookingScreen() {
 
   const loadBookings = useCallback(async () => {
     if (!profile) return;
+    setLoading(true);
     const data = await getUserServiceBookings(profile.uid);
     setBookings(data);
+    setLoading(false);
   }, [profile]);
 
   useEffect(() => {
-    if (tab === "history") loadBookings().finally(() => setLoading(false));
+    if (tab === "history") loadBookings();
   }, [tab, loadBookings]);
 
   async function handleSubmit() {
     if (!form.phone.trim() || !form.address.trim() || !form.issue.trim()) {
-      Alert.alert("Error", "All fields are required.");
+      Alert.alert("Missing Details", "Please fill in contact phone, address, and issue description.");
       return;
     }
     setLoading(true);
     try {
-      await createServiceBooking({
+      const result = await createServiceBooking({
         userId: profile.uid,
         userName: profile.name,
         phone: form.phone.trim(),
         address: form.address.trim(),
         issue: form.issue.trim()
       });
+      const ticketId = result?.id || `SRV-${Date.now().toString().slice(-6)}`;
+      setSubmittedTicketId(ticketId);
       setForm(f => ({ ...f, issue: "" }));
-      Alert.alert("Booking Submitted", "Your service request has been received. Our team will contact you within 24 hours.");
+      setSuccessModalVisible(true);
     } catch (err) {
-      Alert.alert("Error", err.message);
+      Alert.alert("Booking Error", err.message);
     } finally {
       setLoading(false);
     }
@@ -83,6 +92,12 @@ export default function ServiceBookingScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
+      ) : loading ? (
+        <View style={{ padding: 16, gap: 12 }}>
+          <SkeletonServiceItem />
+          <SkeletonServiceItem />
+          <SkeletonServiceItem />
+        </View>
       ) : (
         <FlatList
           data={bookings}
@@ -110,6 +125,25 @@ export default function ServiceBookingScreen() {
           )}
         />
       )}
+
+      {/* Animated Success Modal replacing plain alert */}
+      <SuccessModal
+        visible={successModalVisible}
+        onClose={() => setSuccessModalVisible(false)}
+        title="Service Visit Booked! 🛠️"
+        subtitle="Your request has been registered. Our certified technician will contact you within 24 hours to schedule the doorstep visit."
+        referenceNumber={submittedTicketId}
+        referenceLabel="Service Ticket ID"
+        primaryBtnText="View My Bookings"
+        onPrimaryPress={() => {
+          setSuccessModalVisible(false);
+          setTab("history");
+        }}
+        secondaryBtnText="Done"
+        onSecondaryPress={() => setSuccessModalVisible(false)}
+        iconName="engineering"
+        iconColor="#0284c7"
+      />
     </View>
   );
 }

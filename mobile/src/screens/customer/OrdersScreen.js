@@ -8,11 +8,16 @@ import { getUserOrders } from "../../services/orderService";
 import { formatPrice, formatDate, statusColor } from "../../utils/formatPrice";
 import colors from "../../constants/colors";
 
+import { SkeletonOrderList } from "../../components/Skeleton";
+import InvoicePreviewModal from "../../components/InvoicePreviewModal";
+
 export default function OrdersScreen({ navigation }) {
   const { profile } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -30,63 +35,152 @@ export default function OrdersScreen({ navigation }) {
     setRefreshing(false);
   }
 
+  function handleOpenInvoice(order) {
+    setSelectedOrder(order);
+    setShowInvoiceModal(true);
+  }
+
+  function handleOpenDemo() {
+    setSelectedOrder(null);
+    setShowInvoiceModal(true);
+  }
+
   if (loading) {
-    return <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return (
+      <View style={s.container}>
+        <SkeletonOrderList count={4} />
+      </View>
+    );
   }
 
   return (
-    <FlatList
-      style={s.container}
-      data={orders}
-      keyExtractor={i => i.id}
-      contentContainerStyle={s.list}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      ListEmptyComponent={
-        <View style={s.empty}>
-          <Text style={s.emptyIcon}>📋</Text>
-          <Text style={s.emptyTitle}>No orders yet</Text>
-          <Text style={s.emptyBody}>Your orders will appear here after checkout.</Text>
-          <TouchableOpacity style={s.shopBtn} onPress={() => navigation.navigate("Catalog")}>
-            <Text style={s.shopBtnText}>Start Shopping</Text>
-          </TouchableOpacity>
+    <View style={s.container}>
+      {/* Top Banner with Demo Receipt Button */}
+      <View style={s.topBanner}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.bannerTitle}>My Purchases & Warranties</Text>
+          <Text style={s.bannerSub}>Tamper-proof verifiable invoices</Text>
         </View>
-      }
-      renderItem={({ item }) => (
-        <View style={s.card}>
-          <View style={s.cardHeader}>
-            <View>
-              <Text style={s.orderId}>Order #{item.id.slice(-6).toUpperCase()}</Text>
-              <Text style={s.date}>{formatDate(item.createdAt)}</Text>
+        <TouchableOpacity style={s.demoReceiptBtn} onPress={handleOpenDemo} activeOpacity={0.8}>
+          <Text style={s.demoReceiptBtnText}>🧾 Receipt Demo</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={orders}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={
+          <View style={s.empty}>
+            <Text style={s.emptyIcon}>📋</Text>
+            <Text style={s.emptyTitle}>No orders yet</Text>
+            <Text style={s.emptyBody}>Your orders will appear here after checkout.</Text>
+            <TouchableOpacity style={s.shopBtn} onPress={() => navigation.navigate("Catalog")}>
+              <Text style={s.shopBtnText}>Start Shopping</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <View style={s.card}>
+            <View style={s.cardHeader}>
+              <View>
+                <Text style={s.orderId}>Order #{item.id.slice(-6).toUpperCase()}</Text>
+                <Text style={s.date}>{formatDate(item.createdAt)}</Text>
+              </View>
+              <View style={[s.statusChip, { backgroundColor: statusColor(item.status) + "22" }]}>
+                <Text style={[s.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
+              </View>
             </View>
-            <View style={[s.statusChip, { backgroundColor: statusColor(item.status) + "22" }]}>
-              <Text style={[s.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
+
+            <View style={s.divider} />
+
+            {item.items?.slice(0, 2).map(i => (
+              <Text key={i.productId} style={s.itemRow} numberOfLines={1}>
+                {i.name} x{i.qty} — {formatPrice(i.price * i.qty)}
+              </Text>
+            ))}
+            {item.items?.length > 2 && (
+              <Text style={s.moreItems}>+{item.items.length - 2} more item{item.items.length - 2 !== 1 ? "s" : ""}</Text>
+            )}
+
+            <View style={s.cardFooter}>
+              <View>
+                <Text style={s.totalLabel}>Total</Text>
+                <Text style={s.totalValue}>{formatPrice(item.total)}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={s.viewInvoiceBtn}
+                onPress={() => handleOpenInvoice(item)}
+                activeOpacity={0.75}
+              >
+                <Text style={s.viewInvoiceBtnText}>Print Receipt 🧾</Text>
+              </TouchableOpacity>
             </View>
           </View>
+        )}
+      />
 
-          <View style={s.divider} />
-
-          {item.items?.slice(0, 2).map(i => (
-            <Text key={i.productId} style={s.itemRow} numberOfLines={1}>
-              {i.name} x{i.qty} — {formatPrice(i.price * i.qty)}
-            </Text>
-          ))}
-          {item.items?.length > 2 && (
-            <Text style={s.moreItems}>+{item.items.length - 2} more item{item.items.length - 2 !== 1 ? "s" : ""}</Text>
-          )}
-
-          <View style={s.cardFooter}>
-            <Text style={s.totalLabel}>Total</Text>
-            <Text style={s.totalValue}>{formatPrice(item.total)}</Text>
-          </View>
-        </View>
-      )}
-    />
+      {/* Animated Printed Receipt Modal */}
+      <InvoicePreviewModal
+        visible={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        order={selectedOrder}
+      />
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  topBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  bannerTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  bannerSub: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  demoReceiptBtn: {
+    backgroundColor: "#0a2540",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#00b4d8",
+  },
+  demoReceiptBtnText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  viewInvoiceBtn: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  viewInvoiceBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0a2540",
+  },
   list: { padding: 16, gap: 12, paddingBottom: 32 },
   card: { backgroundColor: colors.card, borderRadius: 14, padding: 16, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },

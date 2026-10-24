@@ -9,6 +9,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { formatPrice } from "../../utils/formatPrice";
 import { auth } from "../../config/firebase";
 import colors from "../../constants/colors";
+import SuccessModal from "../../components/SuccessModal";
+import InvoicePreviewModal from "../../components/InvoicePreviewModal";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001";
 
@@ -28,9 +30,12 @@ export default function CheckoutScreen({ navigation }) {
   const [addressQuery, setAddressQuery] = useState("");
   const [searchingAddr, setSearchingAddr] = useState(false);
 
-  // Razorpay Checkout Modal
-  const [checkoutData, setCheckoutData] = useState(null); // { orderId, amount, currency, keyId }
+  // Modals & Order Receipt
+  const [checkoutData, setCheckoutData] = useState(null);
   const [showWebView, setShowWebView] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
+  const [confirmedOrder, setConfirmedOrder] = useState(null);
 
   function setAddr(field, value) {
     setAddress(prev => ({ ...prev, [field]: value }));
@@ -82,6 +87,10 @@ export default function CheckoutScreen({ navigation }) {
 
   // Step 1: Request order creation from server (server recomputes total from products/)
   async function startRazorpayPayment() {
+    if (items.length === 0) {
+      Alert.alert("Your Cart is Empty", "Please browse our catalog and add purifiers or cartridges to checkout.");
+      return;
+    }
     if (!validateAddress()) return;
     setLoading(true);
     setStatusMsg("Connecting to server (waking up cloud instance if idle)...");
@@ -128,6 +137,10 @@ export default function CheckoutScreen({ navigation }) {
 
   // Fast direct test checkout for seamless testing
   async function startInstantTestPayment() {
+    if (items.length === 0) {
+      Alert.alert("Your Cart is Empty", "Please browse our catalog and add purifiers or cartridges to checkout.");
+      return;
+    }
     if (!validateAddress()) return;
     const testOrderId = "order_demo_" + Date.now();
     const testPaymentId = "pay_demo_" + Date.now();
@@ -170,6 +183,8 @@ export default function CheckoutScreen({ navigation }) {
 
     try {
       const token = await auth.currentUser?.getIdToken();
+      const currentItems = [...items];
+      const currentTotal = total;
       const response = await fetch(`${SERVER_URL}/payment/verify`, {
         method: "POST",
         headers: {
@@ -181,7 +196,7 @@ export default function CheckoutScreen({ navigation }) {
           razorpay_payment_id,
           razorpay_signature,
           userId: profile.uid,
-          items: items.map(i => ({ productId: i.productId, qty: i.qty })),
+          items: currentItems.map(i => ({ productId: i.productId, qty: i.qty })),
           address
         })
       });
@@ -191,13 +206,20 @@ export default function CheckoutScreen({ navigation }) {
         throw new Error(data.error || "Payment signature verification failed.");
       }
 
+      const createdOrder = {
+        id: data.orderId,
+        total: data.total || currentTotal,
+        items: currentItems,
+        address,
+        status: "confirmed",
+        createdAt: new Date(),
+        paymentId: razorpay_payment_id
+      };
+
       clearCart();
       setCheckoutData(null);
-      Alert.alert(
-        "Order Placed Successfully! 💧",
-        `Order #${data.orderId.slice(-6).toUpperCase()} has been confirmed. A receipt has been issued and technician assigned.`,
-        [{ text: "View Orders", onPress: () => navigation.navigate("Orders") }]
-      );
+      setConfirmedOrder(createdOrder);
+      setSuccessModalVisible(true);
     } catch (err) {
       Alert.alert("Verification Error", err.message);
     } finally {
@@ -432,6 +454,38 @@ export default function CheckoutScreen({ navigation }) {
           />
         </View>
       </Modal>
+
+      {/* Animated Order Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        onClose={() => setSuccessModalVisible(false)}
+        title="Order Placed Successfully! 💧"
+        subtitle="Your payment has been verified. A receipt has been issued and technician assigned."
+        referenceNumber={confirmedOrder?.id}
+        referenceLabel="Order Reference"
+        primaryBtnText="View Printed Receipt 🧾"
+        onPrimaryPress={() => {
+          setSuccessModalVisible(false);
+          setInvoiceModalVisible(true);
+        }}
+        secondaryBtnText="View All Orders"
+        onSecondaryPress={() => {
+          setSuccessModalVisible(false);
+          navigation.navigate("Orders");
+        }}
+        iconName="check-circle"
+        iconColor="#10b981"
+      />
+
+      {/* Animated Printed Receipt Component Modal */}
+      <InvoicePreviewModal
+        visible={invoiceModalVisible}
+        onClose={() => {
+          setInvoiceModalVisible(false);
+          navigation.navigate("Orders");
+        }}
+        order={confirmedOrder}
+      />
     </ScrollView>
   );
 }

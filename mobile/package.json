@@ -20,6 +20,8 @@
     "expo-device": "~58.0.5",
     "expo-font": "~58.0.9",
     "expo-notifications": "~58.1.6",
+    "expo-print": "~58.0.7",
+    "expo-sharing": "~58.0.20",
     "expo-splash-screen": "~58.0.11",
     "expo-status-bar": "~58.0.4",
     "firebase": "^10.14.1",

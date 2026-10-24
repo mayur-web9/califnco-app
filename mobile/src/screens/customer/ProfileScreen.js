@@ -9,6 +9,7 @@ import { db } from "../../config/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { logout } from "../../services/authService";
+import Skeleton from "../../components/Skeleton";
 
 export default function ProfileScreen() {
   const { profile, refreshProfile } = useAuth();
@@ -56,6 +57,23 @@ export default function ProfileScreen() {
       { text: "Cancel" },
       { text: "Sign out", style: "destructive", onPress: () => logout() }
     ]);
+  }
+
+  if (!profile) {
+    return (
+      <ScrollView style={[s.container, { backgroundColor: theme.background }]} contentContainerStyle={s.content}>
+        <View style={[s.avatarWrap, { backgroundColor: isDark ? theme.card : theme.primary, alignItems: "center" }]}>
+          <Skeleton width={80} height={80} borderRadius={40} style={{ marginBottom: 12 }} />
+          <Skeleton width={140} height={20} borderRadius={6} style={{ marginBottom: 8 }} />
+          <Skeleton width={80} height={18} borderRadius={10} style={{ marginBottom: 8 }} />
+          <Skeleton width={180} height={14} borderRadius={6} />
+        </View>
+        <View style={{ padding: 16, gap: 14 }}>
+          <Skeleton width="100%" height={80} borderRadius={14} />
+          <Skeleton width="100%" height={160} borderRadius={14} />
+        </View>
+      </ScrollView>
+    );
   }
 
   return (
