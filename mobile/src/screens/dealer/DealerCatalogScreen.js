@@ -4,6 +4,7 @@ import {
   StyleSheet, ActivityIndicator, Alert, Modal
 } from "react-native";
 import { getProducts, getWholesalePrices } from "../../services/productService";
+import { CATEGORIES } from "../../constants/categories";
 import { useAuth } from "../../hooks/useAuth";
 import { placeBulkOrder } from "../../services/orderService";
 import ProductCard from "../../components/ProductCard";

@@ -94,3 +94,6 @@ export async function fetchUserOrders(userId) {
     return orders;
   }
 }
+
+export const getUserOrders = fetchUserOrders;
+

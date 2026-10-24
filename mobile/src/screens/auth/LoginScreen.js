@@ -3,12 +3,14 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { login } from "../../services/authService";
 import colors from "../../constants/colors";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
@@ -50,14 +52,29 @@ export default function LoginScreen({ navigation }) {
           />
 
           <Text style={s.label}>Password</Text>
-          <TextInput
-            style={s.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-          />
+          <View style={s.passwordContainer}>
+            <TextInput
+              style={s.passwordInput}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={s.eyeBtn}
+              onPress={() => setShowPassword(p => !p)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name={showPassword ? "visibility" : "visibility-off"}
+                size={22}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity style={s.button} onPress={handleLogin} disabled={loading}>
             {loading ? (
@@ -92,6 +109,26 @@ const s = StyleSheet.create({
   input: {
     borderWidth: 1, borderColor: colors.border, borderRadius: 10,
     padding: 14, fontSize: 15, color: colors.text, marginBottom: 16, backgroundColor: colors.background
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+    marginBottom: 16
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 15,
+    color: colors.text
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    justifyContent: "center",
+    alignItems: "center"
   },
   button: {
     backgroundColor: colors.primary, borderRadius: 10,
