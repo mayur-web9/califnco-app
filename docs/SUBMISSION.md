@@ -15,7 +15,7 @@
 | **GitHub Repository** | `https://github.com/mayur-web9/califnco-app` | Verified (`main` branch) |
 | **Admin Web Portal** | `https://califnco-app-phi.vercel.app` | **LIVE on Vercel** 🎉 |
 | **Backend REST API** | `https://califnco-app.onrender.com` (Health: `https://califnco-app.onrender.com/health`) | **LIVE on Render** 🎉 |
-| **Mobile Application** | `mobile/` (React Native Expo 51 + EAS Build) | Tested & Validated |
+| **Mobile Application (APK v2)** | [Download Android APK](https://expo.dev/artifacts/eas/0CE54Nq4YFMHztXnvg6rSMadDKrIyU8INncF5MAhn7s.apk) (Build `8ab46fe7`) | **Updated & Verified** 🎉 |
 | **n8n Automation Workflow** | `automation/workflow.json` | Tested (Groq + FLUX.1-schnell) |
 | **Clean ZIP Submission** | `califnco-submission-clean.zip` | Sanitized (Zero secrets/keys) |
 
