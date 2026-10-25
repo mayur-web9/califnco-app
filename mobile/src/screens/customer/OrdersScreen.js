@@ -1,21 +1,26 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, ActivityIndicator,
-  TouchableOpacity, RefreshControl
+  TouchableOpacity, RefreshControl, ScrollView
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../hooks/useAuth";
+import { useTheme } from "../../hooks/useTheme";
 import { getUserOrders } from "../../services/orderService";
 import { formatPrice, formatDate, statusColor } from "../../utils/formatPrice";
-import colors from "../../constants/colors";
-
+import ScreenHeader from "../../components/ScreenHeader";
 import { SkeletonOrderList } from "../../components/Skeleton";
 import InvoicePreviewModal from "../../components/InvoicePreviewModal";
 
+const STATUS_FILTERS = ["All", "Confirmed", "Dispatched", "Delivered"];
+
 export default function OrdersScreen({ navigation }) {
   const { profile } = useAuth();
+  const { theme, isDark } = useTheme();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("All");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
@@ -40,93 +45,168 @@ export default function OrdersScreen({ navigation }) {
     setShowInvoiceModal(true);
   }
 
-  function handleOpenDemo() {
-    setSelectedOrder(null);
-    setShowInvoiceModal(true);
-  }
+  const filteredOrders = useMemo(() => {
+    if (activeFilter === "All") return orders;
+    return orders.filter(
+      o => (o.status || "confirmed").toLowerCase() === activeFilter.toLowerCase()
+    );
+  }, [orders, activeFilter]);
 
   if (loading) {
     return (
-      <View style={s.container}>
-        <SkeletonOrderList count={4} />
+      <View style={[s.container, { backgroundColor: theme.background }]}>
+        <ScreenHeader
+          title="My Purchases & Orders"
+          subtitle="Official tax invoices & warranty records"
+          badgeText="💧 RETAIL ORDERS"
+        />
+        <View style={{ padding: 16 }}>
+          <SkeletonOrderList count={4} />
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={s.container}>
-      {/* Top Banner */}
-      <View style={s.topBanner}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.bannerTitle}>My Purchases & Warranties</Text>
-          <Text style={s.bannerSub}>Official tax invoices & warranty records</Text>
-        </View>
+    <View style={[s.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader
+        title="My Purchases & Orders"
+        subtitle="Official tax invoices & warranty records"
+        badgeText="💧 RETAIL ORDERS"
+        rightAction={
+          <TouchableOpacity
+            style={s.headerRefreshBtn}
+            onPress={onRefresh}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="refresh" size={20} color="#ffffff" />
+          </TouchableOpacity>
+        }
+      />
+
+      {/* Filter Chips Bar */}
+      <View style={[s.filterBar, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
+          {STATUS_FILTERS.map(f => {
+            const active = activeFilter === f;
+            return (
+              <TouchableOpacity
+                key={f}
+                style={[
+                  s.filterChip,
+                  { backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "#f1f5f9" },
+                  active && { backgroundColor: isDark ? theme.accent : "#0a2540" }
+                ]}
+                onPress={() => setActiveFilter(f)}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[
+                    s.filterChipText,
+                    { color: theme.textMuted },
+                    active && { color: "#ffffff", fontWeight: "800" }
+                  ]}
+                >
+                  {f} {f === "All" ? `(${orders.length})` : ""}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       <FlatList
-        data={orders}
+        data={filteredOrders}
         keyExtractor={i => i.id}
         contentContainerStyle={s.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00b4d8" />}
         ListEmptyComponent={
           <View style={s.empty}>
-            <Text style={s.emptyIcon}>📋</Text>
-            <Text style={s.emptyTitle}>No orders yet</Text>
-            <Text style={s.emptyBody}>Your orders will appear here after checkout.</Text>
-            <TouchableOpacity style={s.shopBtn} onPress={() => navigation.navigate("Catalog")}>
-              <Text style={s.shopBtnText}>Start Shopping</Text>
+            <View style={[s.emptyIconWrap, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
+              <MaterialIcons name="receipt-long" size={48} color="#00b4d8" />
+            </View>
+            <Text style={[s.emptyTitle, { color: theme.text }]}>
+              {activeFilter === "All" ? "No purchases yet" : `No ${activeFilter.toLowerCase()} orders`}
+            </Text>
+            <Text style={[s.emptyBody, { color: theme.textMuted }]}>
+              Your orders with tax invoice & warranty will be tracked here.
+            </Text>
+            <TouchableOpacity
+              style={s.shopBtn}
+              onPress={() => navigation.navigate("Catalog")}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="shopping-bag" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+              <Text style={s.shopBtnText}>Explore Purifiers</Text>
             </TouchableOpacity>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={s.card}>
-            <View style={s.cardHeader}>
-              <View>
-                <Text style={s.orderId}>Order #{item.id.slice(-6).toUpperCase()}</Text>
-                <Text style={s.date}>{formatDate(item.createdAt)}</Text>
+        renderItem={({ item }) => {
+          const color = statusColor(item.status);
+          return (
+            <View style={[s.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={s.cardHeader}>
+                <View>
+                  <View style={s.orderIdRow}>
+                    <Text style={[s.orderId, { color: theme.text }]}>
+                      Order #{item.id.slice(-6).toUpperCase()}
+                    </Text>
+                    <View style={[s.typeChip, { backgroundColor: item.type === "bulk" ? "rgba(37, 99, 235, 0.12)" : "rgba(16, 185, 129, 0.12)" }]}>
+                      <Text style={[s.typeText, { color: item.type === "bulk" ? "#2563eb" : "#10b981" }]}>
+                        {item.type === "bulk" ? "WHOLESALE" : "RETAIL"}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[s.date, { color: theme.textMuted }]}>{formatDate(item.createdAt)}</Text>
+                </View>
+
+                <View style={[s.statusChip, { backgroundColor: color + "20", borderColor: color + "40" }]}>
+                  <View style={[s.statusDot, { backgroundColor: color }]} />
+                  <Text style={[s.statusText, { color }]}>{(item.status || "confirmed").toUpperCase()}</Text>
+                </View>
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <View style={[s.typeChip, { backgroundColor: item.type === "bulk" ? "#eff6ff" : "#f0fdf4" }]}>
-                  <Text style={[s.typeText, { color: item.type === "bulk" ? "#2563eb" : "#16a34a" }]}>
-                    {item.type === "bulk" ? "BULK" : "RETAIL"}
+
+              <View style={[s.divider, { backgroundColor: theme.border }]} />
+
+              <View style={s.itemsSection}>
+                {item.items?.slice(0, 2).map((i, idx) => (
+                  <View key={idx} style={s.itemRow}>
+                    <Text style={[s.itemName, { color: theme.text }]} numberOfLines={1}>
+                      • {i.name}
+                    </Text>
+                    <Text style={[s.itemQtyPrice, { color: theme.textMuted }]}>
+                      x{i.qty} ({formatPrice(i.price * i.qty)})
+                    </Text>
+                  </View>
+                ))}
+                {item.items?.length > 2 && (
+                  <Text style={[s.moreItems, { color: theme.textMuted }]}>
+                    +{item.items.length - 2} more item{item.items.length - 2 !== 1 ? "s" : ""}
                   </Text>
-                </View>
-                <View style={[s.statusChip, { backgroundColor: statusColor(item.status) + "22" }]}>
-                  <Text style={[s.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={s.divider} />
-
-            {item.items?.slice(0, 2).map(i => (
-              <Text key={i.productId} style={s.itemRow} numberOfLines={1}>
-                {i.name} x{i.qty} — {formatPrice(i.price * i.qty)}
-              </Text>
-            ))}
-            {item.items?.length > 2 && (
-              <Text style={s.moreItems}>+{item.items.length - 2} more item{item.items.length - 2 !== 1 ? "s" : ""}</Text>
-            )}
-
-            <View style={s.cardFooter}>
-              <View>
-                <Text style={s.totalLabel}>Total</Text>
-                <Text style={s.totalValue}>{formatPrice(item.total)}</Text>
+                )}
               </View>
 
-              <TouchableOpacity
-                style={s.viewInvoiceBtn}
-                onPress={() => handleOpenInvoice(item)}
-                activeOpacity={0.75}
-              >
-                <Text style={s.viewInvoiceBtnText}>Print Receipt 🧾</Text>
-              </TouchableOpacity>
+              <View style={[s.cardFooter, { borderTopColor: theme.border }]}>
+                <View>
+                  <Text style={[s.totalLabel, { color: theme.textMuted }]}>Total Amount</Text>
+                  <Text style={s.totalValue}>{formatPrice(item.total)}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={s.viewInvoiceBtn}
+                  onPress={() => handleOpenInvoice(item)}
+                  activeOpacity={0.75}
+                >
+                  <MaterialIcons name="receipt" size={16} color="#00b4d8" style={{ marginRight: 6 }} />
+                  <Text style={s.viewInvoiceBtnText}>Tax Invoice</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
 
-      {/* Animated Printed Receipt Modal */}
+      {/* Invoice / Receipt Modal */}
       <InvoicePreviewModal
         key={selectedOrder?.id || "invoice-modal"}
         visible={showInvoiceModal}
@@ -141,73 +221,192 @@ export default function OrdersScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  topBanner: {
+  container: { flex: 1 },
+  headerRefreshBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterBar: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  filterChipText: {
+    fontSize: 12.5,
+    fontWeight: "600",
+  },
+  list: { padding: 16, gap: 14, paddingBottom: 32 },
+  card: {
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  orderIdRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.card,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    gap: 8,
   },
-  bannerTitle: {
+  orderId: {
     fontSize: 15,
     fontWeight: "800",
-    color: colors.text,
+    letterSpacing: -0.2,
   },
-  bannerSub: {
+  typeChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  typeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  date: {
     fontSize: 12,
-    color: colors.textMuted,
+    marginTop: 4,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 12,
+  },
+  itemsSection: {
+    gap: 6,
+  },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  itemName: {
+    fontSize: 13,
+    fontWeight: "500",
+    flex: 1,
+    marginRight: 8,
+  },
+  itemQtyPrice: {
+    fontSize: 12.5,
+  },
+  moreItems: {
+    fontSize: 12,
+    fontStyle: "italic",
     marginTop: 2,
   },
-  demoReceiptBtn: {
-    backgroundColor: "#0a2540",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#00b4d8",
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
   },
-  demoReceiptBtnText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "700",
+  totalLabel: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
-  list: { padding: 16, gap: 12, paddingBottom: 32 },
-  card: { backgroundColor: colors.card, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  orderId: { fontSize: 14, fontWeight: "800", color: colors.text },
-  date: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  statusChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusText: { fontSize: 12, fontWeight: "800", textTransform: "capitalize" },
-  typeChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  typeText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
-  itemRow: { fontSize: 13, color: colors.textSecondary, marginBottom: 4 },
-  moreItems: { fontSize: 12, color: colors.textMuted, marginBottom: 4, fontStyle: "italic" },
-  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  totalLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: "600" },
-  totalValue: { fontSize: 17, fontWeight: "900", color: "#00b4d8" },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 64 },
-  emptyIcon: { fontSize: 56, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: "800", color: colors.text, marginBottom: 8 },
-  emptyBody: { fontSize: 14, color: colors.textSecondary, textAlign: "center", marginBottom: 24 },
-  shopBtn: { backgroundColor: "#00b4d8", borderRadius: 25, paddingHorizontal: 28, paddingVertical: 14, shadowColor: "#00b4d8", shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 },
-  shopBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#00b4d8",
+    marginTop: 2,
+  },
   viewInvoiceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "rgba(0, 180, 216, 0.12)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(0, 180, 216, 0.3)",
   },
   viewInvoiceBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: "700",
     color: "#00b4d8",
+  },
+  empty: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 60,
+    paddingHorizontal: 24,
+  },
+  emptyIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 19,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+  emptyBody: {
+    fontSize: 13.5,
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  shopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#00b4d8",
+    borderRadius: 25,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+    shadowColor: "#00b4d8",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  shopBtnText: {
+    color: "#ffffff",
+    fontSize: 14.5,
+    fontWeight: "800",
   },
 });

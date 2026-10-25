@@ -7,9 +7,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useTheme } from "../../hooks/useTheme";
+import ScreenHeader from "../../components/ScreenHeader";
 
 export default function AdminDealerApprovalsScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   const [activeTab, setActiveTab] = useState("pending"); // "pending" | "approved"
   const [dealers, setDealers] = useState([]);
@@ -78,57 +79,116 @@ export default function AdminDealerApprovalsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Tab Switcher */}
-      <View style={[styles.tabBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <TouchableOpacity
-          style={[styles.tabBtn, activeTab === "pending" && [styles.activeTabBtn, { backgroundColor: theme.primary }]]}
-          onPress={() => setActiveTab("pending")}
-        >
-          <Text style={[styles.tabText, { color: activeTab === "pending" ? "#fff" : theme.textMuted }]}>
-            Pending Review ({pendingCount})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabBtn, activeTab === "approved" && [styles.activeTabBtn, { backgroundColor: theme.primary }]]}
-          onPress={() => setActiveTab("approved")}
-        >
-          <Text style={[styles.tabText, { color: activeTab === "approved" ? "#fff" : theme.textMuted }]}>
-            Approved Partners ({approvedCount})
-          </Text>
-        </TouchableOpacity>
+      <ScreenHeader
+        title="Dealer Applications"
+        subtitle="Verify trade credentials & wholesale access"
+        badgeText="👑 DEALER LICENSES"
+        badgeIcon="badge"
+        rightAction={
+          <TouchableOpacity
+            style={styles.headerRefreshBtn}
+            onPress={() => {
+              setRefreshing(true);
+              fetchDealers();
+            }}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="refresh" size={20} color="#ffffff" />
+          </TouchableOpacity>
+        }
+      />
+
+      {/* Modern Pill Switcher */}
+      <View style={[styles.tabBar, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+        <View style={[styles.tabPillContainer, { backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "#f1f5f9" }]}>
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === "pending" && { backgroundColor: isDark ? theme.accent : "#0a2540" }]}
+            onPress={() => setActiveTab("pending")}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons
+              name="hourglass-top"
+              size={15}
+              color={activeTab === "pending" ? "#ffffff" : theme.textMuted}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.tabPillText,
+                { color: activeTab === "pending" ? "#ffffff" : theme.textMuted },
+                activeTab === "pending" && { fontWeight: "800" }
+              ]}
+            >
+              Pending ({pendingCount})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabPill, activeTab === "approved" && { backgroundColor: isDark ? theme.accent : "#0a2540" }]}
+            onPress={() => setActiveTab("approved")}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons
+              name="verified"
+              size={15}
+              color={activeTab === "approved" ? "#ffffff" : theme.textMuted}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.tabPillText,
+                { color: activeTab === "approved" ? "#ffffff" : theme.textMuted },
+                activeTab === "approved" && { fontWeight: "800" }
+              ]}
+            >
+              Approved ({approvedCount})
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
         <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={theme.accent} />
+          <ActivityIndicator size="large" color="#00b4d8" />
           <Text style={{ color: theme.textMuted, marginTop: 12 }}>Loading dealer applications...</Text>
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.centerBox}>
-          <MaterialIcons name="done-all" size={48} color={theme.textMuted} />
+          <View style={[styles.emptyIconWrap, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
+            <MaterialIcons name="done-all" size={48} color="#00b4d8" />
+          </View>
           <Text style={[styles.emptyTitle, { color: theme.text }]}>
             {activeTab === "pending" ? "No Pending Applications" : "No Approved Partners Yet"}
           </Text>
           <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
             {activeTab === "pending"
-              ? "All dealer accounts are currently reviewed."
-              : "Review pending applications to activate wholesale accounts."}
+              ? "All commercial dealer accounts have been evaluated."
+              : "Review pending applications above to activate wholesale partner accounts."}
           </Text>
         </View>
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={item => item.uid}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchDealers(); }} tintColor={theme.accent} />}
-          contentContainerStyle={{ padding: 16 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchDealers();
+              }}
+              tintColor="#00b4d8"
+            />
+          }
+          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
           renderItem={({ item }) => (
             <View style={[styles.dealerCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={styles.dealerHeader}>
-                <View style={[styles.avatar, { backgroundColor: activeTab === "pending" ? "#fef3c7" : "#dcfce7" }]}>
+                <View style={[styles.avatar, { backgroundColor: activeTab === "pending" ? "rgba(217, 119, 6, 0.12)" : "rgba(16, 185, 129, 0.12)" }]}>
                   <MaterialIcons
                     name={activeTab === "pending" ? "storefront" : "verified"}
                     size={24}
-                    color={activeTab === "pending" ? "#b45309" : "#16a34a"}
+                    color={activeTab === "pending" ? "#d97706" : "#10b981"}
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
@@ -137,23 +197,23 @@ export default function AdminDealerApprovalsScreen() {
                   </Text>
                   <Text style={[styles.dealerEmail, { color: theme.textMuted }]}>{item.email}</Text>
                 </View>
-                <View style={[styles.statusChip, { backgroundColor: activeTab === "pending" ? "#fffbeb" : "#f0fdf4" }]}>
-                  <Text style={[styles.statusChipText, { color: activeTab === "pending" ? "#b45309" : "#16a34a" }]}>
+                <View style={[styles.statusChip, { backgroundColor: activeTab === "pending" ? "rgba(217, 119, 6, 0.12)" : "rgba(16, 185, 129, 0.12)" }]}>
+                  <Text style={[styles.statusChipText, { color: activeTab === "pending" ? "#d97706" : "#10b981" }]}>
                     {activeTab === "pending" ? "PENDING" : "APPROVED"}
                   </Text>
                 </View>
               </View>
 
-              <View style={[styles.detailsBox, { borderColor: theme.border }]}>
+              <View style={[styles.detailsBox, { borderTopColor: theme.border }]}>
                 {item.phone && (
                   <View style={styles.detailRow}>
-                    <MaterialIcons name="phone" size={16} color={theme.textMuted} />
+                    <MaterialIcons name="phone" size={15} color="#00b4d8" />
                     <Text style={[styles.detailText, { color: theme.text }]}>{item.phone}</Text>
                   </View>
                 )}
                 {item.address?.line1 ? (
                   <View style={styles.detailRow}>
-                    <MaterialIcons name="place" size={16} color={theme.textMuted} />
+                    <MaterialIcons name="place" size={15} color="#00b4d8" />
                     <Text style={[styles.detailText, { color: theme.text }]}>
                       {item.address.line1}, {item.address.city || ""}, {item.address.state || ""} {item.address.pincode || ""}
                     </Text>
@@ -167,6 +227,7 @@ export default function AdminDealerApprovalsScreen() {
                     style={[styles.btn, styles.rejectBtn]}
                     disabled={updatingId === item.uid}
                     onPress={() => handleUpdateStatus(item, "rejected")}
+                    activeOpacity={0.8}
                   >
                     <MaterialIcons name="close" size={16} color="#dc2626" />
                     <Text style={styles.rejectBtnText}>Reject</Text>
@@ -176,6 +237,7 @@ export default function AdminDealerApprovalsScreen() {
                     style={[styles.btn, styles.approveBtn]}
                     disabled={updatingId === item.uid}
                     onPress={() => handleUpdateStatus(item, "approved")}
+                    activeOpacity={0.8}
                   >
                     {updatingId === item.uid ? (
                       <ActivityIndicator size="small" color="#fff" />
@@ -198,27 +260,145 @@ export default function AdminDealerApprovalsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  tabBar: { flexDirection: "row", padding: 8, margin: 16, marginBottom: 0, borderRadius: 12, borderWidth: 1 },
-  tabBtn: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
-  activeTabBtn: {},
-  tabText: { fontSize: 13, fontWeight: "700" },
-  centerBox: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
-  emptyTitle: { fontSize: 16, fontWeight: "800", marginTop: 12 },
-  emptySubtitle: { fontSize: 12, textAlign: "center", marginTop: 4, lineHeight: 18 },
-  dealerCard: { borderRadius: 12, borderWidth: 1, padding: 16, marginBottom: 12 },
-  dealerHeader: { flexDirection: "row", alignItems: "center" },
-  avatar: { width: 44, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  dealerName: { fontSize: 15, fontWeight: "800" },
-  dealerEmail: { fontSize: 12, marginTop: 2 },
-  statusChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  statusChipText: { fontSize: 10, fontWeight: "800" },
-  detailsBox: { marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
-  detailRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  detailText: { fontSize: 12, marginLeft: 8, flex: 1 },
-  actionButtonsRow: { flexDirection: "row", marginTop: 14, gap: 10 },
-  btn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 8 },
-  rejectBtn: { backgroundColor: "#fee2e2" },
-  rejectBtnText: { color: "#dc2626", fontSize: 13, fontWeight: "700", marginLeft: 4 },
-  approveBtn: { backgroundColor: "#16a34a" },
-  approveBtnText: { color: "#fff", fontSize: 13, fontWeight: "700", marginLeft: 4 }
+  headerRefreshBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabBar: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  tabPillContainer: {
+    flexDirection: "row",
+    borderRadius: 24,
+    padding: 4,
+  },
+  tabPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 9,
+    borderRadius: 20,
+  },
+  tabPillText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  centerBox: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  emptyIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 19,
+  },
+  dealerCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  dealerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dealerName: {
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  dealerEmail: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  statusChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusChipText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  detailsBox: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  detailText: {
+    fontSize: 12.5,
+    marginLeft: 8,
+    flex: 1,
+  },
+  actionButtonsRow: {
+    flexDirection: "row",
+    marginTop: 14,
+    gap: 10,
+  },
+  btn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  rejectBtn: {
+    backgroundColor: "#fee2e2",
+  },
+  rejectBtnText: {
+    color: "#dc2626",
+    fontSize: 13,
+    fontWeight: "700",
+    marginLeft: 4,
+  },
+  approveBtn: {
+    backgroundColor: "#16a34a",
+  },
+  approveBtnText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "700",
+    marginLeft: 4,
+  },
 });

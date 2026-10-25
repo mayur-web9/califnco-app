@@ -8,15 +8,18 @@ import { getProducts, getWholesalePrices } from "../../services/productService";
 import { CATEGORIES } from "../../constants/categories";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
+import { useTheme } from "../../hooks/useTheme";
 import { logout } from "../../services/authService";
 import { placeBulkOrder } from "../../services/orderService";
 import ProductCard from "../../components/ProductCard";
+import ScreenHeader from "../../components/ScreenHeader";
 import { SkeletonCatalogHeader, SkeletonProductGrid } from "../../components/Skeleton";
 import { formatPrice } from "../../utils/formatPrice";
 import colors from "../../constants/colors";
 
 export default function DealerCatalogScreen({ navigation }) {
   const { profile } = useAuth();
+  const { theme, isDark } = useTheme();
   const { addItem, count } = useCart();
   const [products, setProducts] = useState([]);
   const [wholesaleMap, setWholesaleMap] = useState({});
@@ -133,26 +136,21 @@ export default function DealerCatalogScreen({ navigation }) {
   }
 
   return (
-    <View style={s.container}>
-      {/* Banner */}
-      <View style={s.banner}>
-        <View style={s.bannerTopRow}>
-          <View style={{ flex: 1 }}>
-            <View style={s.dealerRoleBadge}>
-              <MaterialIcons name="verified" size={13} color="#fff" />
-              <Text style={s.dealerRoleText}>VERIFIED B2B DEALER</Text>
-            </View>
-            <Text style={s.bannerTitle}>{profile?.name || "Wholesale Partner"}</Text>
-            <Text style={s.bannerSub}>Tier-1 Wholesale Pricing & Direct Invoices</Text>
-          </View>
-
-          <View style={s.headerActions}>
+    <View style={[s.container, { backgroundColor: theme.background }]}>
+      {/* Screen Header */}
+      <ScreenHeader
+        title="Wholesale Catalog"
+        subtitle="Tier-1 wholesale pricing & factory direct supply"
+        badgeText="🏷️ VERIFIED B2B DEALER"
+        badgeIcon="verified"
+        rightAction={
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <TouchableOpacity
-              style={s.cartBtn}
+              style={s.headerCartBtn}
               onPress={() => navigation.navigate("DealerCart")}
               activeOpacity={0.8}
             >
-              <MaterialIcons name="shopping-cart" size={20} color="#fff" />
+              <MaterialIcons name="shopping-cart" size={18} color="#ffffff" />
               {count > 0 && (
                 <View style={s.cartBadge}>
                   <Text style={s.cartBadgeText}>{count > 9 ? "9+" : count}</Text>
@@ -161,7 +159,7 @@ export default function DealerCatalogScreen({ navigation }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={s.logoutBtn}
+              style={s.headerLogoutBtn}
               onPress={() => {
                 Alert.alert(
                   "Sign Out",
@@ -174,11 +172,11 @@ export default function DealerCatalogScreen({ navigation }) {
               }}
               activeOpacity={0.8}
             >
-              <MaterialIcons name="logout" size={18} color="#fff" />
+              <MaterialIcons name="logout" size={17} color="#ffffff" />
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        }
+      />
 
       {/* Search bar */}
       <View style={s.searchWrap}>
@@ -351,13 +349,10 @@ const s = StyleSheet.create({
   bannerTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   dealerRoleBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, gap: 4, marginBottom: 6 },
   dealerRoleText: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
-  cartBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center", position: "relative" },
-  cartBadge: { position: "absolute", top: -2, right: -4, backgroundColor: colors.accent, borderRadius: 9, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 1.5, borderColor: colors.primary },
+  headerCartBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center", position: "relative" },
+  headerLogoutBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(239,68,68,0.75)", alignItems: "center", justifyContent: "center" },
+  cartBadge: { position: "absolute", top: -2, right: -4, backgroundColor: colors.accent, borderRadius: 9, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 1.5, borderColor: "#0a2540" },
   cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
-  logoutBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(239,68,68,0.85)", alignItems: "center", justifyContent: "center" },
-  bannerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
-  bannerSub: { fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 2 },
   searchWrap: {
     flexDirection: "row", alignItems: "center", backgroundColor: colors.card,
     margin: 14, borderRadius: 12, paddingHorizontal: 14,

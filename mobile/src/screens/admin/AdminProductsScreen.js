@@ -11,6 +11,7 @@ import {
 import { db } from "../../config/firebase";
 import { useTheme } from "../../hooks/useTheme";
 import { uploadImageToCloudinary } from "../../services/cloudinaryService";
+import ScreenHeader from "../../components/ScreenHeader";
 
 const CATEGORIES = ["All", "Purifier", "Dispenser", "Pump", "Filter", "Spare"];
 
@@ -335,37 +336,35 @@ export default function AdminProductsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Top Banner with Stats & Add Button */}
-      <View style={[styles.headerBanner, { backgroundColor: theme.primary }]}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.headerTitle}>Product Catalog Manager</Text>
-            <Text style={styles.headerSubtitle}>
-              {products.length} Products registered across 5 categories
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.addHeaderBtn} onPress={openAddModal}>
-            <MaterialIcons name="add" size={20} color="#042f2e" />
-            <Text style={styles.addHeaderBtnText}>Add</Text>
+      {/* Unified Screen Header */}
+      <ScreenHeader
+        title="Catalog & Inventory"
+        subtitle={`${products.length} products listed • Live stock control`}
+        badgeText="👑 ADMIN CATALOG"
+        badgeIcon="inventory"
+        rightAction={
+          <TouchableOpacity style={styles.headerAddBtn} onPress={openAddModal} activeOpacity={0.8}>
+            <MaterialIcons name="add" size={18} color="#ffffff" />
+            <Text style={styles.headerAddBtnText}>Add</Text>
           </TouchableOpacity>
-        </View>
+        }
+      />
 
-        {/* Search Bar */}
-        <View style={styles.searchBox}>
-          <MaterialIcons name="search" size={20} color="rgba(255,255,255,0.7)" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search products by name or SKU..."
-            placeholderTextColor="rgba(255,255,255,0.6)"
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")}>
-              <MaterialIcons name="close" size={18} color="rgba(255,255,255,0.7)" />
-            </TouchableOpacity>
-          )}
-        </View>
+      {/* Search Bar */}
+      <View style={[styles.searchWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <MaterialIcons name="search" size={20} color={theme.textMuted} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search products by name or SKU..."
+          placeholderTextColor={theme.textMuted}
+          value={search}
+          onChangeText={setSearch}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <MaterialIcons name="close" size={18} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Category Chips Bar */}
@@ -646,33 +645,44 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     marginTop: 2
   },
-  addHeaderBtn: {
+  headerAddBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#2dd4bf",
+    backgroundColor: "#00b4d8",
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8
+    paddingVertical: 7,
+    borderRadius: 20,
+    shadowColor: "#00b4d8",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  addHeaderBtnText: {
-    fontSize: 14,
+  headerAddBtnText: {
+    fontSize: 13,
     fontWeight: "800",
-    color: "#042f2e"
+    color: "#ffffff"
   },
-  searchBox: {
+  searchWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 8,
+    marginHorizontal: 14,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 8
+    paddingVertical: 8,
+    borderWidth: 1,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
-    color: "#ffffff",
-    fontSize: 14
+    fontSize: 14,
+    paddingVertical: 2,
   },
   categoryScroll: {
     paddingHorizontal: 12,

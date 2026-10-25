@@ -7,9 +7,11 @@ import { WebView } from "react-native-webview";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useCart } from "../../hooks/useCart";
 import { useAuth } from "../../hooks/useAuth";
+import { useTheme } from "../../hooks/useTheme";
 import { formatPrice } from "../../utils/formatPrice";
 import { auth } from "../../config/firebase";
 import colors from "../../constants/colors";
+import ScreenHeader from "../../components/ScreenHeader";
 import SuccessModal from "../../components/SuccessModal";
 import InvoicePreviewModal from "../../components/InvoicePreviewModal";
 
@@ -18,6 +20,7 @@ const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001"
 export default function CheckoutScreen({ navigation }) {
   const { items, total, clearCart } = useCart();
   const { profile } = useAuth();
+  const { theme, isDark } = useTheme();
 
   const [address, setAddress] = useState({
     line1: profile?.address?.line1 || "",
@@ -354,7 +357,15 @@ export default function CheckoutScreen({ navigation }) {
   }
 
   return (
-    <ScrollView style={s.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <View style={[s.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader
+        title="Order Checkout"
+        subtitle="Secure 256-bit SSL encrypted payment"
+        badgeText="🔒 SECURE CHECKOUT"
+        badgeIcon="verified-user"
+        onBack={() => navigation.goBack()}
+      />
+      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       {/* 1. Delivery Address Card (Screen 11) */}
       <View style={s.card}>
         <View style={s.cardHeaderRow}>
@@ -562,6 +573,7 @@ export default function CheckoutScreen({ navigation }) {
         order={confirmedOrder}
       />
     </ScrollView>
+    </View>
   );
 }
 

@@ -84,12 +84,12 @@ function CustomerTabs() {
       <Tab.Screen
         name="Orders"
         component={OrdersScreen}
-        options={{ tabBarIcon: ({ color, size }) => <MaterialIcons name="receipt" size={size} color={color} />, tabBarLabel: "Orders" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="receipt" size={size} color={color} />, tabBarLabel: "Orders" }}
       />
       <Tab.Screen
         name="Service"
         component={ServiceBookingScreen}
-        options={{ tabBarIcon: ({ color, size }) => <MaterialIcons name="build" size={size} color={color} />, tabBarLabel: "Service" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="build" size={size} color={color} />, tabBarLabel: "Service" }}
       />
       <Tab.Screen
         name="Profile"
@@ -105,7 +105,7 @@ function CatalogStack() {
 
   return (
     <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.headerBg }, headerTintColor: theme.headerText, headerTitleStyle: { fontWeight: "700" } }}>
-      <Stack.Screen name="CatalogList" component={CatalogScreen} options={{ title: "💧 Califnco" }} />
+      <Stack.Screen name="CatalogList" component={CatalogScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: "Product Details" }} />
     </Stack.Navigator>
   );
@@ -116,8 +116,8 @@ function CartStack() {
 
   return (
     <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.headerBg }, headerTintColor: theme.headerText, headerTitleStyle: { fontWeight: "700" } }}>
-      <Stack.Screen name="CartMain" component={CartScreen} options={{ title: "Cart" }} />
-      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: "Checkout" }} />
+      <Stack.Screen name="CartMain" component={CartScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -142,7 +142,7 @@ function DealerTabs() {
       <Tab.Screen
         name="DealerCatalog"
         component={DealerCatalogScreen}
-        options={{ title: "Wholesale Catalog", tabBarIcon: ({ color, size }) => <MaterialIcons name="storefront" size={size} color={color} />, tabBarLabel: "Catalog" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="storefront" size={size} color={color} />, tabBarLabel: "Catalog" }}
       />
       <Tab.Screen
         name="DealerCart"
@@ -152,12 +152,12 @@ function DealerTabs() {
       <Tab.Screen
         name="DealerOrders"
         component={DealerOrdersScreen}
-        options={{ title: "My Orders", tabBarIcon: ({ color, size }) => <MaterialIcons name="receipt" size={size} color={color} />, tabBarLabel: "Orders" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="receipt" size={size} color={color} />, tabBarLabel: "Orders" }}
       />
       <Tab.Screen
         name="DealerProfile"
         component={ProfileScreen}
-        options={{ title: "Profile", headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />, tabBarLabel: "Profile" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />, tabBarLabel: "Profile" }}
       />
     </Tab.Navigator>
   );
@@ -183,27 +183,27 @@ function AdminTabs() {
       <Tab.Screen
         name="AdminDashboard"
         component={AdminDashboardScreen}
-        options={{ title: "Admin Operations", tabBarIcon: ({ color, size }) => <MaterialIcons name="dashboard" size={size} color={color} />, tabBarLabel: "Dashboard" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="dashboard" size={size} color={color} />, tabBarLabel: "Dashboard" }}
       />
       <Tab.Screen
         name="AdminProducts"
         component={AdminProductsScreen}
-        options={{ title: "Catalog & Stock", tabBarIcon: ({ color, size }) => <MaterialIcons name="inventory" size={size} color={color} />, tabBarLabel: "Products" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="inventory" size={size} color={color} />, tabBarLabel: "Products" }}
       />
       <Tab.Screen
         name="AdminDealers"
         component={AdminDealerApprovalsScreen}
-        options={{ title: "Dealer Approvals", tabBarIcon: ({ color, size }) => <MaterialIcons name="badge" size={size} color={color} />, tabBarLabel: "Dealers" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="badge" size={size} color={color} />, tabBarLabel: "Dealers" }}
       />
       <Tab.Screen
         name="AdminOrders"
         component={AdminOrdersScreen}
-        options={{ title: "Fulfillment Orders", tabBarIcon: ({ color, size }) => <MaterialIcons name="local-shipping" size={size} color={color} />, tabBarLabel: "Orders" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="local-shipping" size={size} color={color} />, tabBarLabel: "Orders" }}
       />
       <Tab.Screen
         name="AdminProfile"
         component={ProfileScreen}
-        options={{ title: "Admin Profile", headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />, tabBarLabel: "Profile" }}
+        options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />, tabBarLabel: "Profile" }}
       />
     </Tab.Navigator>
   );

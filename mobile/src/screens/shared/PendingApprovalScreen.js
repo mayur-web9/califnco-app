@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Scr
 import { MaterialIcons } from "@expo/vector-icons";
 import { logout } from "../../services/authService";
 import { useAuth } from "../../hooks/useAuth";
-import colors from "../../constants/colors";
+import { useTheme } from "../../hooks/useTheme";
+import ScreenHeader from "../../components/ScreenHeader";
 
 export default function PendingApprovalScreen() {
   const { profile, refreshProfile } = useAuth();
+  const { theme, isDark } = useTheme();
   const [checking, setChecking] = useState(false);
 
   async function handleCheckStatus() {
@@ -22,98 +24,236 @@ export default function PendingApprovalScreen() {
   }
 
   async function handleLogout() {
-    try {
-      await logout();
-    } catch (err) {
-      Alert.alert("Error", err.message);
-    }
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (err) {
+              Alert.alert("Error", err.message);
+            }
+          }
+        }
+      ]
+    );
   }
 
   return (
-    <ScrollView contentContainerStyle={s.container}>
-      <View style={s.iconWrap}>
-        <MaterialIcons name="hourglass-top" size={44} color="#d97706" />
-      </View>
-      <Text style={s.title}>Wholesale Application Pending</Text>
-      <Text style={s.body}>
-        Your commercial B2B dealer registration has been submitted and is currently under review by the Califnco operations desk.
-      </Text>
+    <View style={[s.container, { backgroundColor: theme.background }]}>
+      <ScreenHeader
+        title="Dealer Verification"
+        subtitle="Wholesale commercial tier evaluation"
+        badgeText="⏳ APPLICATION PENDING"
+        badgeIcon="hourglass-top"
+        badgeColor="#d97706"
+        rightAction={
+          <TouchableOpacity style={s.headerLogoutBtn} onPress={handleLogout} activeOpacity={0.8}>
+            <MaterialIcons name="logout" size={17} color="#ffffff" />
+          </TouchableOpacity>
+        }
+      />
 
-      {/* 4-Step Verification Stepper */}
-      <View style={s.stepperBox}>
-        <Text style={s.stepperTitle}>Verification & Activation Steps</Text>
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={s.centerCard}>
+          <View style={[s.iconWrap, { backgroundColor: isDark ? "rgba(217, 119, 6, 0.18)" : "#fef3c7" }]}>
+            <MaterialIcons name="hourglass-top" size={44} color="#d97706" />
+          </View>
+          <Text style={[s.title, { color: theme.text }]}>Commercial Verification Underway</Text>
+          <Text style={[s.body, { color: theme.textMuted }]}>
+            Your B2B trade account registration has been submitted and is undergoing credential verification by the Califnco operations team.
+          </Text>
+        </View>
 
-        <View style={s.stepRow}>
-          <MaterialIcons name="check-circle" size={20} color="#16a34a" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={s.stepName}>1. Account Registered</Text>
-            <Text style={s.stepDesc}>Profile and credentials created in Califnco system.</Text>
+        {/* 4-Step Verification Stepper */}
+        <View style={[s.stepperBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[s.stepperTitle, { color: theme.text }]}>Activation Roadmap</Text>
+
+          <View style={s.stepRow}>
+            <MaterialIcons name="check-circle" size={20} color="#16a34a" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[s.stepName, { color: theme.text }]}>1. Account Registered</Text>
+              <Text style={[s.stepDesc, { color: theme.textMuted }]}>Profile and business credentials recorded.</Text>
+            </View>
+          </View>
+
+          <View style={s.stepRow}>
+            <MaterialIcons name="radio-button-checked" size={20} color="#d97706" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[s.stepName, { color: theme.text }]}>2. Admin Review (Current Step)</Text>
+              <Text style={[s.stepDesc, { color: theme.textMuted }]}>Verifying store territory, trade license, and GST.</Text>
+            </View>
+          </View>
+
+          <View style={s.stepRow}>
+            <MaterialIcons name="radio-button-unchecked" size={20} color={theme.textMuted} />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[s.stepName, { color: theme.text }]}>3. Wholesale Pricing Tier Unlocked</Text>
+              <Text style={[s.stepDesc, { color: theme.textMuted }]}>Access 20% to 35% commercial margin on full catalog.</Text>
+            </View>
+          </View>
+
+          <View style={[s.stepRow, { marginBottom: 0 }]}>
+            <MaterialIcons name="radio-button-unchecked" size={20} color={theme.textMuted} />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[s.stepName, { color: theme.text }]}>4. Bulk Consignment Dispatch</Text>
+              <Text style={[s.stepDesc, { color: theme.textMuted }]}>Place wholesale pallet consignments with tax invoices.</Text>
+            </View>
           </View>
         </View>
 
-        <View style={s.stepRow}>
-          <MaterialIcons name="radio-button-checked" size={20} color="#d97706" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={s.stepName}>2. Admin Review (Current Step)</Text>
-            <Text style={s.stepDesc}>Evaluating business details, regional territory, and GST.</Text>
-          </View>
+        {/* Submitted Details Card */}
+        <View style={[s.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Text style={[s.cardHeader, { color: "#00b4d8" }]}>Business Details On File</Text>
+          <Text style={[s.cardItem, { color: theme.text }]}>
+            <Text style={{ fontWeight: "700" }}>Business Name: </Text>
+            {profile?.displayName || profile?.name || "Commercial Dealer"}
+          </Text>
+          <Text style={[s.cardItem, { color: theme.text }]}>
+            <Text style={{ fontWeight: "700" }}>Email: </Text>
+            {profile?.email || "dealer.pending@test.com"}
+          </Text>
+          {profile?.phone && (
+            <Text style={[s.cardItem, { color: theme.text }]}>
+              <Text style={{ fontWeight: "700" }}>Phone: </Text>
+              {profile.phone}
+            </Text>
+          )}
+          {profile?.address?.line1 && (
+            <Text style={[s.cardItem, { color: theme.text }]}>
+              <Text style={{ fontWeight: "700" }}>Location: </Text>
+              {profile.address.line1}, {profile.address.city || ""}
+            </Text>
+          )}
         </View>
 
-        <View style={s.stepRow}>
-          <MaterialIcons name="radio-button-unchecked" size={20} color="#9ca3af" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={s.stepName}>3. Wholesale Pricing Tier Unlocked</Text>
-            <Text style={s.stepDesc}>20% to 35% discount margin applied to all 52 products.</Text>
-          </View>
-        </View>
-
-        <View style={s.stepRow}>
-          <MaterialIcons name="radio-button-unchecked" size={20} color="#9ca3af" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={s.stepName}>4. B2B Bulk Order Dispatch Access</Text>
-            <Text style={s.stepDesc}>Place wholesale bulk consignments with credit terms.</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Submitted Details Card */}
-      <View style={s.card}>
-        <Text style={s.cardHeader}>Applicant Details on File</Text>
-        <Text style={s.cardItem}><Text style={s.bold}>Business Name: </Text>{profile?.displayName || profile?.name || "Kiran Enterprises"}</Text>
-        <Text style={s.cardItem}><Text style={s.bold}>Email: </Text>{profile?.email || "dealer.pending@test.com"}</Text>
-        {profile?.phone && <Text style={s.cardItem}><Text style={s.bold}>Phone: </Text>{profile.phone}</Text>}
-        {profile?.address?.line1 && (
-          <Text style={s.cardItem}><Text style={s.bold}>Address: </Text>{profile.address.line1}, {profile.address.city || ""}</Text>
-        )}
-      </View>
-
-      <TouchableOpacity style={s.checkBtn} onPress={handleCheckStatus} disabled={checking}>
-        {checking ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.checkBtnText}>Refresh Approval Status ⟳</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
-        <Text style={s.logoutText}>Sign out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={s.checkBtn} onPress={handleCheckStatus} disabled={checking} activeOpacity={0.85}>
+          {checking ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <>
+              <MaterialIcons name="refresh" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+              <Text style={s.checkBtnText}>Check Approval Status</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: colors.background, alignItems: "center", padding: 24, paddingTop: 40 },
-  iconWrap: { width: 88, height: 88, borderRadius: 44, backgroundColor: "#fef3c7", alignItems: "center", justifyContent: "center", marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: "800", color: colors.text, marginBottom: 8, textAlign: "center" },
-  body: { fontSize: 13, color: colors.textSecondary, textAlign: "center", lineHeight: 18, marginBottom: 20 },
-  stepperBox: { width: "100%", backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-  stepperTitle: { fontSize: 13, fontWeight: "800", color: colors.text, marginBottom: 12 },
-  stepRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 12 },
-  stepName: { fontSize: 12, fontWeight: "700", color: colors.text },
-  stepDesc: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
-  card: { width: "100%", backgroundColor: colors.card, borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-  cardHeader: { fontSize: 12, fontWeight: "800", color: colors.primary, marginBottom: 8, textTransform: "uppercase" },
-  cardItem: { fontSize: 12, color: colors.text, marginBottom: 4 },
-  bold: { fontWeight: "700" },
-  checkBtn: { width: "100%", backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", marginBottom: 12 },
-  checkBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
-  logoutBtn: { paddingVertical: 10, paddingHorizontal: 24 },
-  logoutText: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" }
+  container: { flex: 1 },
+  headerLogoutBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(239, 68, 68, 0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 36,
+  },
+  centerCard: {
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+  iconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  title: {
+    fontSize: 19,
+    fontWeight: "800",
+    marginBottom: 6,
+    textAlign: "center",
+    letterSpacing: -0.2,
+  },
+  body: {
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 19,
+    marginBottom: 8,
+    paddingHorizontal: 8,
+  },
+  stepperBox: {
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  stepperTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 14,
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  stepName: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  stepDesc: {
+    fontSize: 11.5,
+    marginTop: 2,
+  },
+  card: {
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardHeader: {
+    fontSize: 11,
+    fontWeight: "800",
+    marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  cardItem: {
+    fontSize: 12.5,
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  checkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#00b4d8",
+    borderRadius: 16,
+    paddingVertical: 14,
+    shadowColor: "#00b4d8",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  checkBtnText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "800",
+  },
 });
