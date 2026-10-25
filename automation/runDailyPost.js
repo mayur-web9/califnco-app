@@ -146,50 +146,46 @@ function stripMarkdown(text) {
     .trim();
 }
 
-// Sanitize caption to strictly enforce factual numeric constraints
-function sanitizeCaption(text, product) {
-  let cleaned = stripMarkdown(text);
-  const allowedDocText = `${product.name || ''} ${product.description || ''} ${product.price || ''} ${product.category || ''}`;
+// Generate 5 to 8 relevant hashtags based on category
+function generateHashtags(product) {
+  const cat = (product.category || 'Water').replace(/[^a-zA-Z]/g, '');
+  const tags = [
+    '#Califnco',
+    `#${cat}`,
+    '#WaterPurifier',
+    '#CleanWater',
+    '#SafeDrinking',
+    '#WaterFiltration',
+    '#HealthyLiving'
+  ];
+  return tags.slice(0, 6).join(' ');
+}
 
-  // Strip unauthorized percentage or removal claims not present in product document
-  const sentences = cleaned.split(/(?<=[.!?\n])\s+/);
-  const filteredSentences = sentences.map(sentence => {
-    // Check if sentence has a percentage (e.g., 99.9%, 100%)
-    const pctMatches = sentence.match(/\b\d+(\.\d+)?%/g) || [];
-    for (const pct of pctMatches) {
-      if (!allowedDocText.includes(pct)) {
-        return ''; // Remove hallucinated percentage claim
-      }
-    }
-    // Check for "removes X" or "eliminates X" style claims
-    if (/removes?\s+\d+/i.test(sentence) && !/removes?\s+\d+/i.test(allowedDocText)) {
-      return '';
-    }
-    return sentence;
-  }).filter(Boolean);
+// Build structured caption from distinct parts (headline line, one detail line, price line, call to action, hashtags)
+// Formats price as "Rs. 299" with non-breaking space (\u00A0) so it never wraps or splits.
+// Strictly avoids splitting on periods.
+function buildStructuredCaption(headline, detail, price, hashtags) {
+  const priceFormatted = `Rs.\u00A0${Number(price).toLocaleString('en-IN')}`;
+  const cta = 'Discover more and order on the Califnco app.';
 
-  cleaned = filteredSentences.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-
-  // Ensure exactly one Califnco app CTA is present
-  if (!/califnco\s+app/i.test(cleaned)) {
-    cleaned += '\n\nDiscover more and order on the Califnco app.';
-  }
-
-  return cleaned.slice(0, 2000);
+  return [
+    headline.trim(),
+    detail.trim(),
+    priceFormatted,
+    '',
+    cta,
+    '',
+    hashtags.trim()
+  ].join('\n');
 }
 
 // Generate compliant caption via Groq or deterministic dry-run generator
 async function generateCaption(product) {
+  const hashtags = generateHashtags(product);
+
   if (isDryRun) {
-    const lines = [
-      `${product.name}`,
-      `Category: ${product.category}`,
-      `Price: Rs. ${Number(product.price).toLocaleString('en-IN')}`,
-      product.description ? product.description.split('.')[0] + '.' : 'Engineered for clean, safe daily drinking water.'
-    ];
-    const cta = 'Explore specifications and place orders on the Califnco app.';
-    const hashtags = '#Califnco #WaterPurifier #DrinkingWater #CleanWater #WaterFiltration #HomeAppliances';
-    const dryCaption = `${lines.join('\n')}\n\n${cta}\n\n${hashtags}`;
+    const detail = product.description ? product.description.replace(/\r?\n+/g, ' ').trim() : 'Engineered for clean, safe daily drinking water.';
+    const dryCaption = buildStructuredCaption(product.name, detail, product.price, hashtags);
 
     return {
       caption: dryCaption,
@@ -206,24 +202,18 @@ async function generateCaption(product) {
   const { selectedModel } = await selectGroqModel(groqApiKey);
 
   const systemPrompt = `You are an exact, factual copywriter for Califnco water systems.
-Write an Instagram caption based STRICTLY on the facts in the product document provided.
+Write ONE single concise factual detail line describing the product's primary material or function based STRICTLY on the facts in the product document provided.
 
-MANDATORY CONSTRAINTS:
+MANDATORY RULES:
 - ONLY use facts present in the product document.
-- STRICT NUMERIC CONSTRAINT: Forbid ANY numeric claim (percentages, litres per hour, stage counts, years) unless that exact number appears in the product fields.
-- Remove all "removes X% of ..." or "kills 99% of ..." style claims unless the number is in the data.
+- FORBID any numeric claim (percentages like 99.9%, litres per hour, stage counts, years) unless that exact number appears in the product description.
+- REMOVE all "removes X% of ..." claims.
 - Do NOT invent discounts, offers, or sales.
-- Do NOT make delivery or installation promises.
-- Output MUST have 2 to 4 short lines of factual product details.
-- Include exactly ONE call to action mentioning the Califnco app.
-- Conclude with 5 to 8 relevant hashtags.
-- Do NOT use markdown: NO bold (**), NO italics (*), NO headings (#), NO backticks. Plain text only.
-- Maximum length 1000 characters.`;
+- Output ONLY the single factual detail sentence. No headline, no price, no CTA, no hashtags. Plain text only without markdown.`;
 
   const userPrompt = `Product Name: ${product.name}
 Category: ${product.category}
-Price: Rs. ${product.price}
-Specs / Description: ${product.description || 'Domestic water purification unit'}`;
+Description: ${product.description || 'Domestic water purification unit'}`;
 
   const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -247,14 +237,22 @@ Specs / Description: ${product.description || 'Domestic water purification unit'
   }
 
   const data = await res.json();
-  const rawCaption = data?.choices?.[0]?.message?.content || '';
-  if (!rawCaption) {
+  const rawDetail = data?.choices?.[0]?.message?.content || '';
+  if (!rawDetail) {
     throw new Error('Groq returned empty caption completion');
   }
 
-  const cleanCaption = sanitizeCaption(rawCaption, product);
+  let cleanDetail = stripMarkdown(rawDetail).replace(/\r?\n+/g, ' ').trim();
+  
+  // Guard against unverified percentage claims without splitting on periods
+  if (/\d+(\.\d+)?%/.test(cleanDetail) && !(product.description || '').includes('%')) {
+    cleanDetail = product.description ? product.description.replace(/\r?\n+/g, ' ').trim() : 'Engineered for clean and safe water filtration.';
+  }
+
+  const finalCaption = buildStructuredCaption(product.name, cleanDetail, product.price, hashtags);
+
   return {
-    caption: cleanCaption,
+    caption: finalCaption,
     modelUsed: selectedModel
   };
 }
