@@ -158,6 +158,20 @@ export default function AdminDashboardScreen({ navigation }) {
 
           <TouchableOpacity
             style={[styles.actionRow, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={() => navigation.navigate("AdminProducts")}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: "#ecfdf5" }]}>
+              <MaterialIcons name="inventory" size={24} color="#059669" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.actionRowTitle, { color: theme.text }]}>Product Catalog & Stock Management</Text>
+              <Text style={[styles.actionRowDesc, { color: theme.textMuted }]}>Add new products, edit retail/B2B prices, update stock, and delete items.</Text>
+            </View>
+            <MaterialIcons name="arrow-forward-ios" size={16} color={theme.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionRow, { backgroundColor: theme.card, borderColor: theme.border }]}
             onPress={() => navigation.navigate("AdminDealers")}
           >
             <View style={[styles.actionIconBox, { backgroundColor: "#eff6ff" }]}>

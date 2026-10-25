@@ -28,6 +28,7 @@ import DealerOrdersScreen from "../screens/dealer/DealerOrdersScreen";
 
 // Admin screens
 import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
+import AdminProductsScreen from "../screens/admin/AdminProductsScreen";
 import AdminDealerApprovalsScreen from "../screens/admin/AdminDealerApprovalsScreen";
 import AdminOrdersScreen from "../screens/admin/AdminOrdersScreen";
 
@@ -183,6 +184,11 @@ function AdminTabs() {
         name="AdminDashboard"
         component={AdminDashboardScreen}
         options={{ title: "Admin Operations", tabBarIcon: ({ color, size }) => <MaterialIcons name="dashboard" size={size} color={color} />, tabBarLabel: "Dashboard" }}
+      />
+      <Tab.Screen
+        name="AdminProducts"
+        component={AdminProductsScreen}
+        options={{ title: "Catalog & Stock", tabBarIcon: ({ color, size }) => <MaterialIcons name="inventory" size={size} color={color} />, tabBarLabel: "Products" }}
       />
       <Tab.Screen
         name="AdminDealers"

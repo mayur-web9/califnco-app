@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { doc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../config/firebase";
 
 export default function InventoryView({ products, onRefresh }) {
@@ -23,7 +23,32 @@ export default function InventoryView({ products, onRefresh }) {
     imageUrl: ""
   });
 
-  const categories = ["all", "Purifier", "Filter", "Spare", "Accessory"];
+  const categories = ["all", "Purifier", "Dispenser", "Pump", "Filter", "Spare", "Accessory"];
+
+  async function handleDeleteProduct(prod) {
+    if (!prod || !prod.id) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete "${prod.name}" (${prod.id}) from the catalog?\n\nThis will remove it from both retail and wholesale stores.`
+    );
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      await deleteDoc(doc(db, "products", prod.id));
+      try {
+        await deleteDoc(doc(db, "wholesale", prod.id));
+      } catch (err) {
+        // Wholesale document may not exist for custom items
+      }
+      setSelectedProduct(null);
+      setIsAdding(false);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      alert("Failed to delete product: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const filtered = products.filter(p => {
     if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
@@ -312,12 +337,23 @@ export default function InventoryView({ products, onRefresh }) {
                         )}
                       </td>
                       <td style={{ textAlign: "right" }}>
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => openEditModal(prod)}
-                        >
-                          ✏️ Edit / Specs
-                        </button>
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => openEditModal(prod)}
+                            title="Edit Product"
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            style={{ color: "var(--danger)", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                            onClick={() => handleDeleteProduct(prod)}
+                            title="Delete Product"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -454,21 +490,34 @@ export default function InventoryView({ products, onRefresh }) {
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px" }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => { setSelectedProduct(null); setIsAdding(false); }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={saving}
-                >
-                  {saving ? "Saving Changes..." : isAdding ? "Publish to Catalog" : "Update Product"}
-                </button>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px" }}>
+                {!isAdding && selectedProduct ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ color: "var(--danger)", borderColor: "rgba(239, 68, 68, 0.4)" }}
+                    onClick={() => handleDeleteProduct(selectedProduct)}
+                    disabled={saving}
+                  >
+                    🗑️ Delete Product
+                  </button>
+                ) : <div />}
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => { setSelectedProduct(null); setIsAdding(false); }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={saving}
+                  >
+                    {saving ? "Saving Changes..." : isAdding ? "Publish to Catalog" : "Update Product"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

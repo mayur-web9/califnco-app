@@ -530,5 +530,36 @@ None. All test suites passing cleanly with zero errors.
 - `node automation/runDailyPost.js --dry-run`: Verified prompt sanitization and deterministic caption formatting.
 - `node automation/runDailyPost.js`: Published live post to Instagram (`https://www.instagram.com/p/De6NjyZDfoX/`) with 1080x1080 watermark-free image.
 
+---
+
+## 2026-10-25 — Complete Product Management (Add, Edit, Delete) for Admin Web & Mobile
+
+**What was done:**
+- **Admin Web CRUD**:
+  - Enhanced `admin-web/src/views/InventoryView.jsx` with full product deletion support (`deleteDoc` on both `products/{id}` and `wholesale/{id}`).
+  - Added "🗑️ Delete" action buttons on each table row and within the Edit modal with confirmation dialogs.
+  - Retained "+ Add New Product" and "✏️ Edit / Specs" modals with price and wholesale price sync.
+- **Admin Mobile CRUD**:
+  - Created `mobile/src/screens/admin/AdminProductsScreen.js` providing full catalog management:
+    - Live search by name or SKU and category filter chips (All, Purifier, Dispenser, Pump, Filter, Spare).
+    - Real-time stock status badges with +/- stock adjust buttons updating Firestore directly.
+    - Floating / header "+ Add" product creation modal.
+    - Card-level "Edit" modal for modifying names, categories, retail/B2B pricing, stock counts, and specs.
+    - Card-level "Delete" button with native confirmation alert, removing items from both `products` and `wholesale` collections.
+  - Registered `AdminProducts` tab in `AdminTabs` in `mobile/src/navigation/AppNavigator.js`.
+  - Added dedicated shortcut card in `mobile/src/screens/admin/AdminDashboardScreen.js` under Administrative Controls.
+
+**Files changed:**
+- admin-web/src/views/InventoryView.jsx
+- mobile/src/screens/admin/AdminProductsScreen.js (new)
+- mobile/src/navigation/AppNavigator.js
+- mobile/src/screens/admin/AdminDashboardScreen.js
+- docs/PROGRESS_LOG.md
+
+**How tested:**
+- `npm run build` in `admin-web`: Built in 2.94s with zero compilation errors.
+- `npx expo export -p android`: Bundled 1,091 modules cleanly with zero errors.
+
+
 
 
