@@ -259,17 +259,29 @@ Specs / Description: ${product.description || 'Domestic water purification unit'
   };
 }
 
-// Validate image buffer format (JPEG or PNG) and size (> 10 KB)
+// Validate image buffer format (JPEG or PNG) and size (reject images under 30 KB)
 function validateImageBuffer(buffer) {
-  if (!Buffer.isBuffer(buffer)) return false;
-  if (buffer.length <= 10240) return false;
+  if (!Buffer.isBuffer(buffer)) {
+    console.warn('  Image validation failed: input is not a buffer.');
+    return false;
+  }
+  const minSizeBytes = 30 * 1024; // 30 KB minimum
+  if (buffer.length < minSizeBytes) {
+    console.warn(`  Image buffer rejected: size is ${(buffer.length / 1024).toFixed(1)} KB (minimum required is 30.0 KB to ensure high visual quality)`);
+    return false;
+  }
 
   // JPEG magic bytes: FF D8 FF
   const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
   // PNG magic bytes: 89 50 4E 47
   const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
 
-  return isJpeg || isPng;
+  if (!isJpeg && !isPng) {
+    console.warn('  Image validation failed: buffer is not a valid JPEG or PNG.');
+    return false;
+  }
+
+  return true;
 }
 
 const CATEGORY_DESCRIPTIONS = {
@@ -399,7 +411,7 @@ async function generateProductImage(product) {
     buffer = await processPollinationsImage(buffer);
 
     if (!validateImageBuffer(buffer)) {
-      throw new Error(`Generated buffer failed validation (size: ${buffer.length} bytes; must be JPEG/PNG > 10KB)`);
+      throw new Error(`Generated buffer failed validation (size: ${buffer.length} bytes; must be JPEG/PNG >= 30KB)`);
     }
 
     console.log(`  Image provider used: Pollinations FLUX (${(buffer.length / 1024).toFixed(1)} KB)`);
