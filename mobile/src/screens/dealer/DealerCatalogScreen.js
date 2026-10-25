@@ -3,9 +3,12 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, Modal
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { getProducts, getWholesalePrices } from "../../services/productService";
 import { CATEGORIES } from "../../constants/categories";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../hooks/useCart";
+import { logout } from "../../services/authService";
 import { placeBulkOrder } from "../../services/orderService";
 import ProductCard from "../../components/ProductCard";
 import { SkeletonCatalogHeader, SkeletonProductGrid } from "../../components/Skeleton";
@@ -14,6 +17,7 @@ import colors from "../../constants/colors";
 
 export default function DealerCatalogScreen({ navigation }) {
   const { profile } = useAuth();
+  const { addItem, count } = useCart();
   const [products, setProducts] = useState([]);
   const [wholesaleMap, setWholesaleMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -56,6 +60,29 @@ export default function DealerCatalogScreen({ navigation }) {
     const minQty = wholesaleInfo?.minQty || 1;
     setSelectedProduct(product);
     setOrderQty(minQty);
+  }
+
+  function handleAddToCart() {
+    if (!selectedProduct) return;
+    const wholesaleInfo = wholesaleMap[selectedProduct.id];
+    const unitPrice = wholesaleInfo?.price || selectedProduct.price;
+    const minQty = wholesaleInfo?.minQty || 1;
+
+    if (orderQty < minQty) {
+      Alert.alert("Minimum Order Quantity", `Wholesale minimum is ${minQty} units.`);
+      return;
+    }
+
+    addItem(selectedProduct, orderQty, unitPrice);
+    setSelectedProduct(null);
+    Alert.alert(
+      "Added to Wholesale Cart! 🛒",
+      `${orderQty}x ${selectedProduct.name} added at wholesale price ${formatPrice(unitPrice)}/unit.`,
+      [
+        { text: "Continue Shopping" },
+        { text: "View Cart", onPress: () => navigation.navigate("DealerCart") }
+      ]
+    );
   }
 
   async function handlePlaceWholesaleOrder() {
@@ -109,8 +136,48 @@ export default function DealerCatalogScreen({ navigation }) {
     <View style={s.container}>
       {/* Banner */}
       <View style={s.banner}>
-        <Text style={s.bannerTitle}>🏢 B2B Wholesale Portal</Text>
-        <Text style={s.bannerSub}>Tier-1 Verified Dealer Pricing Enabled</Text>
+        <View style={s.bannerTopRow}>
+          <View style={{ flex: 1 }}>
+            <View style={s.dealerRoleBadge}>
+              <MaterialIcons name="verified" size={13} color="#fff" />
+              <Text style={s.dealerRoleText}>VERIFIED B2B DEALER</Text>
+            </View>
+            <Text style={s.bannerTitle}>{profile?.name || "Wholesale Partner"}</Text>
+            <Text style={s.bannerSub}>Tier-1 Wholesale Pricing & Direct Invoices</Text>
+          </View>
+
+          <View style={s.headerActions}>
+            <TouchableOpacity
+              style={s.cartBtn}
+              onPress={() => navigation.navigate("DealerCart")}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="shopping-cart" size={20} color="#fff" />
+              {count > 0 && (
+                <View style={s.cartBadge}>
+                  <Text style={s.cartBadgeText}>{count > 9 ? "9+" : count}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={s.logoutBtn}
+              onPress={() => {
+                Alert.alert(
+                  "Sign Out",
+                  "Are you sure you want to sign out from your B2B account?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Sign Out", style: "destructive", onPress: () => logout() }
+                  ]
+                );
+              }}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="logout" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       {/* Search bar */}
@@ -249,6 +316,15 @@ export default function DealerCatalogScreen({ navigation }) {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  style={s.cartModalBtn}
+                  onPress={handleAddToCart}
+                  disabled={placingOrder}
+                >
+                  <MaterialIcons name="add-shopping-cart" size={17} color={colors.primary} />
+                  <Text style={s.cartModalText}>Add to Cart</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   style={s.confirmBtn}
                   onPress={handlePlaceWholesaleOrder}
                   disabled={placingOrder}
@@ -256,7 +332,7 @@ export default function DealerCatalogScreen({ navigation }) {
                   {placingOrder ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={s.confirmText}>Place Bulk Order</Text>
+                    <Text style={s.confirmText}>Direct Order</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -271,9 +347,17 @@ export default function DealerCatalogScreen({ navigation }) {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  banner: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 12 },
-  bannerTitle: { fontSize: 16, fontWeight: "800", color: "#fff" },
-  bannerSub: { fontSize: 12, color: colors.accent, marginTop: 2 },
+  banner: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
+  bannerTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  dealerRoleBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, gap: 4, marginBottom: 6 },
+  dealerRoleText: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  cartBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center", position: "relative" },
+  cartBadge: { position: "absolute", top: -2, right: -4, backgroundColor: colors.accent, borderRadius: 9, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 1.5, borderColor: colors.primary },
+  cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  logoutBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(239,68,68,0.85)", alignItems: "center", justifyContent: "center" },
+  bannerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  bannerSub: { fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 2 },
   searchWrap: {
     flexDirection: "row", alignItems: "center", backgroundColor: colors.card,
     margin: 14, borderRadius: 12, paddingHorizontal: 14,
@@ -345,9 +429,11 @@ const s = StyleSheet.create({
   totalBox: { backgroundColor: colors.background, padding: 12, borderRadius: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   totalLabel: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
   totalVal: { fontSize: 18, fontWeight: "800", color: colors.primary },
-  modalActions: { flexDirection: "row", gap: 12, marginTop: 18 },
-  cancelBtn: { flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center" },
-  cancelText: { color: colors.textSecondary, fontWeight: "700" },
-  confirmBtn: { flex: 2, backgroundColor: colors.primary, borderRadius: 10, padding: 14, alignItems: "center" },
-  confirmText: { color: "#fff", fontWeight: "700" }
+  modalActions: { flexDirection: "row", gap: 8, marginTop: 18 },
+  cancelBtn: { flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: 10, paddingVertical: 12, alignItems: "center", justifyContent: "center" },
+  cancelText: { color: colors.textSecondary, fontWeight: "700", fontSize: 13 },
+  cartModalBtn: { flex: 1.4, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: "rgba(10,37,64,0.05)", borderRadius: 10, paddingVertical: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
+  cartModalText: { color: colors.primary, fontWeight: "700", fontSize: 13 },
+  confirmBtn: { flex: 1.4, backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 12, alignItems: "center", justifyContent: "center" },
+  confirmText: { color: "#fff", fontWeight: "700", fontSize: 13 }
 });

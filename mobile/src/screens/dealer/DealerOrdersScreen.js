@@ -121,8 +121,12 @@ export default function DealerOrdersScreen() {
       />
 
       <InvoicePreviewModal
+        key={selectedOrder?.id || "dealer-invoice"}
         visible={showInvoiceModal}
-        onClose={() => setShowInvoiceModal(false)}
+        onClose={() => {
+          setShowInvoiceModal(false);
+          setSelectedOrder(null);
+        }}
         order={selectedOrder}
       />
     </View>

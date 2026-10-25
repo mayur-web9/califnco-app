@@ -1,16 +1,20 @@
 import React, { useEffect, useState, useMemo } from "react";
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator
+  StyleSheet, ActivityIndicator, Alert
 } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { getProducts } from "../../services/productService";
 import { CATEGORIES } from "../../constants/categories";
+import { useAuth } from "../../hooks/useAuth";
+import { logout } from "../../services/authService";
 import ProductCard from "../../components/ProductCard";
 import colors from "../../constants/colors";
 
 import { SkeletonCatalogHeader, SkeletonProductGrid } from "../../components/Skeleton";
 
 export default function CatalogScreen({ navigation }) {
+  const { profile } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -47,6 +51,37 @@ export default function CatalogScreen({ navigation }) {
 
   return (
     <View style={s.container}>
+      {/* Header Banner with User Greeting & Sign Out */}
+      <View style={s.banner}>
+        <View style={s.bannerTopRow}>
+          <View style={{ flex: 1 }}>
+            <View style={s.customerRoleBadge}>
+              <MaterialIcons name="water-drop" size={13} color="#fff" />
+              <Text style={s.customerRoleText}>RETAIL CONSUMER STORE</Text>
+            </View>
+            <Text style={s.bannerTitle}>{profile?.name ? `Hello, ${profile.name}` : "💧 Califnco Purifiers"}</Text>
+            <Text style={s.bannerSub}>Pure, Safe & Mineral-Rich Drinking Water</Text>
+          </View>
+
+          <TouchableOpacity
+            style={s.logoutBtn}
+            onPress={() => {
+              Alert.alert(
+                "Sign Out",
+                "Are you sure you want to sign out from your account?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Sign Out", style: "destructive", onPress: () => logout() }
+                ]
+              );
+            }}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="logout" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Search bar */}
       <View style={s.searchWrap}>
         <Text style={s.searchIcon}>🔍</Text>
@@ -117,6 +152,13 @@ export default function CatalogScreen({ navigation }) {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  banner: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
+  bannerTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  customerRoleBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, gap: 4, marginBottom: 6 },
+  customerRoleText: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  logoutBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(239,68,68,0.85)", alignItems: "center", justifyContent: "center" },
+  bannerTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  bannerSub: { fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 2 },
   searchWrap: {
     flexDirection: "row", alignItems: "center", backgroundColor: colors.card,
     margin: 16, marginBottom: 12, borderRadius: 12, paddingHorizontal: 14,

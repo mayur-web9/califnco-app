@@ -144,6 +144,11 @@ function DealerTabs() {
         options={{ title: "Wholesale Catalog", tabBarIcon: ({ color, size }) => <MaterialIcons name="storefront" size={size} color={color} />, tabBarLabel: "Catalog" }}
       />
       <Tab.Screen
+        name="DealerCart"
+        component={CartStack}
+        options={{ headerShown: false, tabBarIcon: CartTabIcon, tabBarLabel: "Cart" }}
+      />
+      <Tab.Screen
         name="DealerOrders"
         component={DealerOrdersScreen}
         options={{ title: "My Orders", tabBarIcon: ({ color, size }) => <MaterialIcons name="receipt" size={size} color={color} />, tabBarLabel: "Orders" }}

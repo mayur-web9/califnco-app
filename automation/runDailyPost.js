@@ -358,10 +358,44 @@ const CATEGORY_DESCRIPTIONS = {
   spare: 'close-up of the named spare part'
 };
 
+const SPARE_PART_DESCRIPTIONS = {
+  tds: 'handheld pen-style water testing meter with digital LCD screen and blue sensor cap, modern water testing instrument',
+  valve: 'compact brass and electric solenoid valve with push-fit fittings and wire terminals',
+  smps: 'black electronic power supply adapter brick with copper pins and power cable',
+  adapter: 'black electronic power supply adapter brick with copper pins and power cable',
+  switch: 'compact water pressure microswitch sensor with 1/4-inch push-fit connections',
+  lps: 'compact low pressure microswitch sensor with 1/4-inch push-fit connections',
+  hps: 'compact high pressure tank-full microswitch sensor with 1/4-inch push-fit connections',
+  restrictor: 'white cylindrical capillary flow restrictor tube with quick-connect fittings',
+  housing: '10-inch transparent blue pre-filter housing bowl canister with black ribbed cap and spanner wrench',
+  lamp: 'clear quartz glass UV germicidal sterilizer lamp tube with 4-pin electrical connector',
+  tube: 'coil of flexible food-grade 1/4-inch white polyethylene water tubing pipe',
+  divertor: 'chrome-plated heavy duty brass sink diverter faucet valve with metal lever',
+  faucet: 'gooseneck chrome water dispensing faucet tap for sink'
+};
+
 function buildImagePrompt(product) {
   const catKey = (product.category || '').toLowerCase().trim();
-  const visualDesc = CATEGORY_DESCRIPTIONS[catKey] || 'water purification equipment';
-  return `${product.name}, ${visualDesc}, product photo, centred, plain light background, soft studio lighting, sharp focus, no text, no logos, no people, no packaging, no watermark`;
+  let visualDesc = CATEGORY_DESCRIPTIONS[catKey] || 'water purification equipment';
+
+  // Remove numbers in parentheses (e.g. (0-9990 PPM), (FR-450)) which confuse AI into drawing gibberish text
+  const cleanName = (product.name || '')
+    .replace(/\(.*?\)/g, '')
+    .replace(/\[.*?\]/g, '')
+    .replace(/\b\d+\s*-\s*\d+\s*(ppm|gpd|lph|psi)\b/gi, '')
+    .trim();
+
+  if (catKey === 'spare') {
+    const lowerName = cleanName.toLowerCase();
+    for (const [key, desc] of Object.entries(SPARE_PART_DESCRIPTIONS)) {
+      if (lowerName.includes(key)) {
+        visualDesc = desc;
+        break;
+      }
+    }
+  }
+
+  return `${cleanName}, ${visualDesc}, commercial product photo, centred, plain light grey studio background, soft studio lighting, sharp focus, no text, no letters, no logos, no people, no packaging, no watermark, no hands`;
 }
 
 function getProductSeed(productId, productName) {
@@ -374,7 +408,7 @@ function getProductSeed(productId, productName) {
   return Math.abs(hash) % 1000000;
 }
 
-// Helper to crop bottom 8% (watermark strip) and resize to 1080x1080 JPEG
+// Helper to crop bottom 12% (watermark strip) and resize to 1080x1080 JPEG
 async function processPollinationsImage(rawBuffer) {
   if (!sharp) {
     console.warn('  Warning: sharp module not loaded, using raw Pollinations buffer.');
@@ -384,15 +418,15 @@ async function processPollinationsImage(rawBuffer) {
     const meta = await sharp(rawBuffer).metadata();
     const width = meta.width || 1080;
     const height = meta.height || 1080;
-    const cropHeight = Math.max(1, Math.floor(height * 0.92)); // Crop off bottom 8% watermark strip
+    const cropHeight = Math.max(1, Math.floor(height * 0.88)); // Crop off bottom 12% to completely eliminate watermarks
 
     const croppedAndResized = await sharp(rawBuffer)
       .extract({ left: 0, top: 0, width: width, height: cropHeight })
       .resize(1080, 1080, { fit: 'cover', position: 'center' })
-      .jpeg({ quality: 90 })
+      .jpeg({ quality: 92 })
       .toBuffer();
 
-    console.log(`  Pollinations image processed with sharp: cropped bottom 8% watermark, resized to 1080x1080 JPEG (${(croppedAndResized.length / 1024).toFixed(1)} KB)`);
+    console.log(`  Pollinations image processed with sharp: cropped watermark strip, resized to 1080x1080 JPEG (${(croppedAndResized.length / 1024).toFixed(1)} KB)`);
     return croppedAndResized;
   } catch (err) {
     console.warn(`  Warning: sharp processing failed (${err.message}), using raw buffer.`);
@@ -400,8 +434,49 @@ async function processPollinationsImage(rawBuffer) {
   }
 }
 
-// 3. Generate image: Hugging Face FLUX.1-schnell first, Pollinations FLUX on failure
+// Parse optional CLI --source <catalog|flux|pollinations> or IMAGE_SOURCE env
+function getRequestedImageSource() {
+  const flagIndex = process.argv.indexOf('--source');
+  if (flagIndex !== -1 && process.argv[flagIndex + 1]) {
+    return process.argv[flagIndex + 1].toLowerCase().trim();
+  }
+  const flagWithEqual = process.argv.find(arg => arg.startsWith('--source='));
+  if (flagWithEqual) {
+    return flagWithEqual.split('=')[1].toLowerCase().trim();
+  }
+  if (process.env.IMAGE_SOURCE && process.env.IMAGE_SOURCE.trim()) {
+    return process.env.IMAGE_SOURCE.toLowerCase().trim();
+  }
+  return null;
+}
+
+// 3. Generate image: Hugging Face FLUX.1-schnell first, Pollinations FLUX on failure, or catalog photo
 async function generateProductImage(product) {
+  const requestedSource = getRequestedImageSource();
+
+  // If user requested catalog photo directly or via environment
+  if (requestedSource === 'catalog' && product.imageUrl) {
+    console.log('[Step 3/5] Using verified catalog photo as requested...');
+    try {
+      const catRes = await fetchWithTimeout(product.imageUrl, {}, 25000);
+      if (catRes.ok) {
+        let catBuf = Buffer.from(await catRes.arrayBuffer());
+        if (sharp) {
+          catBuf = await sharp(catBuf)
+            .resize(1080, 1080, { fit: 'contain', background: '#ffffff' })
+            .jpeg({ quality: 92 })
+            .toBuffer();
+        }
+        if (validateImageBuffer(catBuf)) {
+          console.log(`  Image provider used: catalog photo (${(catBuf.length / 1024).toFixed(1)} KB)`);
+          return { buffer: catBuf, provider: 'catalog photo' };
+        }
+      }
+    } catch (catErr) {
+      console.warn(`  Catalog photo fetch failed: ${catErr.message}`);
+    }
+  }
+
   const prompt = buildImagePrompt(product);
   const seed = getProductSeed(product.id, product.name);
   console.log(`  Image prompt: "${prompt}"`);
@@ -488,7 +563,13 @@ async function generateProductImage(product) {
       try {
         const catRes = await fetchWithTimeout(product.imageUrl, {}, 25000);
         if (catRes.ok) {
-          const catBuf = Buffer.from(await catRes.arrayBuffer());
+          let catBuf = Buffer.from(await catRes.arrayBuffer());
+          if (sharp) {
+            catBuf = await sharp(catBuf)
+              .resize(1080, 1080, { fit: 'contain', background: '#ffffff' })
+              .jpeg({ quality: 92 })
+              .toBuffer();
+          }
           if (validateImageBuffer(catBuf)) {
             console.log(`  Image provider used: catalog photo (${(catBuf.length / 1024).toFixed(1)} KB)`);
             return { buffer: catBuf, provider: 'catalog photo' };

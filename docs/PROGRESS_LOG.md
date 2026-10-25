@@ -491,4 +491,44 @@ None. All test suites passing cleanly with zero errors.
 **What is BLOCKED:**
 1. **Real Email & SMS Dispatch Test**: Blocked pending user's test targets and provider keys (`TEST_EMAIL`, `BREVO_API_KEY`, `TEST_PHONE`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`). Non-blocking failure isolation verified on server.
 
+---
+
+## 2026-10-25 — Dealer Cart, Per-Order Invoices, Home Sign-Out, and Automation Refinements
+
+**What was done:**
+- **Dealer Cart Tab & Wholesale Ordering**:
+  - Integrated `DealerCart` stack with dynamic badge icon in `mobile/src/navigation/AppNavigator.js` within `DealerTabs`.
+  - Added dedicated Cart header button with badge counter in `mobile/src/screens/dealer/DealerCatalogScreen.js`.
+  - Enabled direct bulk "Add to Wholesale Cart" in the Quick Wholesale Order modal with automatic `minQty` validation.
+- **Accurate Per-Order Invoices**:
+  - Fixed `mobile/src/components/InvoicePreviewModal.js` where state initialization previously locked the view to a static sample invoice (`CF-RET-90412`).
+  - Added dynamic state synchronization on `order.id` changes, rendering exact ordered products, line prices, GST calculation, discounts, and totals for each order.
+  - Aligned printable HTML/PDF output with the dynamic order data.
+  - Reset modal state and selected order references on dismissal across `mobile/src/screens/customer/OrdersScreen.js` and `mobile/src/screens/dealer/DealerOrdersScreen.js`.
+- **Role-Consistent Sign Out**:
+  - Added account greeting, role badge, and 1-click Sign Out confirmation action in `mobile/src/screens/dealer/DealerCatalogScreen.js` and `mobile/src/screens/customer/CatalogScreen.js`.
+- **Automation Image Prompt Sanitization & Watermark Removal**:
+  - Stripped parenthesized specifications and model codes from prompt titles in `automation/runDailyPost.js` to prevent diffusion text artifacts.
+  - Added specialized physical descriptions for spare parts (TDS meters, membrane housings, valves, pumps) and strict commercial studio photography constraints.
+  - Increased bottom crop margin to 12% in `processPollinationsImage` to remove logo watermarks prior to 1080x1080 square resizing.
+  - Added `--source catalog` and `IMAGE_SOURCE` flag supporting verified catalog imagery.
+  - Successfully verified live Instagram publication: post `17979882143915901` at `https://www.instagram.com/p/De6NjyZDfoX/`.
+
+**Files changed:**
+- mobile/src/navigation/AppNavigator.js
+- mobile/src/screens/dealer/DealerCatalogScreen.js
+- mobile/src/screens/customer/CatalogScreen.js
+- mobile/src/components/InvoicePreviewModal.js
+- mobile/src/screens/customer/OrdersScreen.js
+- mobile/src/screens/dealer/DealerOrdersScreen.js
+- automation/runDailyPost.js
+- .github/workflows/daily-post.yml
+- docs/PROGRESS_LOG.md
+
+**How tested:**
+- `npx expo export -p android`: Succeeded with code 0 (1,090 modules bundled cleanly).
+- `node automation/runDailyPost.js --dry-run`: Verified prompt sanitization and deterministic caption formatting.
+- `node automation/runDailyPost.js`: Published live post to Instagram (`https://www.instagram.com/p/De6NjyZDfoX/`) with 1080x1080 watermark-free image.
+
+
 

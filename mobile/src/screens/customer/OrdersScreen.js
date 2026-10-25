@@ -55,15 +55,12 @@ export default function OrdersScreen({ navigation }) {
 
   return (
     <View style={s.container}>
-      {/* Top Banner with Demo Receipt Button */}
+      {/* Top Banner */}
       <View style={s.topBanner}>
         <View style={{ flex: 1 }}>
           <Text style={s.bannerTitle}>My Purchases & Warranties</Text>
-          <Text style={s.bannerSub}>Tamper-proof verifiable invoices</Text>
+          <Text style={s.bannerSub}>Official tax invoices & warranty records</Text>
         </View>
-        <TouchableOpacity style={s.demoReceiptBtn} onPress={handleOpenDemo} activeOpacity={0.8}>
-          <Text style={s.demoReceiptBtnText}>🧾 Receipt Demo</Text>
-        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -131,8 +128,12 @@ export default function OrdersScreen({ navigation }) {
 
       {/* Animated Printed Receipt Modal */}
       <InvoicePreviewModal
+        key={selectedOrder?.id || "invoice-modal"}
         visible={showInvoiceModal}
-        onClose={() => setShowInvoiceModal(false)}
+        onClose={() => {
+          setShowInvoiceModal(false);
+          setSelectedOrder(null);
+        }}
         order={selectedOrder}
       />
     </View>

@@ -57,30 +57,57 @@ export default function InvoicePreviewModal({
   const [activeTab, setActiveTab] = useState(order ? "current" : "sample1");
   const [reducedMotion, setReducedMotion] = useState(false);
 
+  // Sync activeTab whenever order changes
+  useEffect(() => {
+    if (order) {
+      setActiveTab("current");
+    }
+  }, [order?.id, visible]);
+
   // Map real order if provided
   let realInvoiceData = null;
   if (order) {
+    const isBulk = order.type === "bulk" || order.type === "wholesale";
+    const formattedItems = (order.items || []).map((it, idx) => ({
+      name: it.name || it.productName || it.productId || `Water Filtration Item #${idx + 1}`,
+      qty: Number(it.qty || 1),
+      price: Number(it.price || (order.total && (order.items || []).length === 1 ? order.total : 0))
+    }));
+
+    let orderDate = new Date().toISOString();
+    if (order.createdAt?.toDate) {
+      orderDate = order.createdAt.toDate().toISOString();
+    } else if (order.createdAt?.seconds) {
+      orderDate = new Date(order.createdAt.seconds * 1000).toISOString();
+    } else if (typeof order.createdAt === "string") {
+      orderDate = order.createdAt;
+    }
+
+    const shortId = (order.id || `ORD-${Date.now()}`).slice(-8).toUpperCase();
+
     realInvoiceData = {
-      theme: order.type === "bulk" ? "neutral" : "success",
-      title: order.type === "bulk" ? "Califnco B2B Wholesale" : "Califnco Water Purifiers",
-      subtitle: order.type === "bulk" ? "Wholesale Order Invoice" : "Retail Purchase & Installation Receipt",
-      invoiceId: order.id || `ORD-${Date.now().toString().slice(-6)}`,
-      amount: order.total || 0,
+      theme: isBulk ? "neutral" : "success",
+      title: isBulk ? "Califnco B2B Wholesale" : "Califnco Water Purifiers",
+      subtitle: isBulk ? "Wholesale Tax Invoice & Dispatch Manifest" : "Retail Purchase & Installation Receipt",
+      invoiceId: order.id ? (order.id.startsWith("CF-") ? order.id : `CF-${shortId}`) : `CF-${shortId}`,
+      amount: Number(order.total || order.amount || 0),
       currency: "INR",
-      date: order.createdAt?.toDate ? order.createdAt.toDate().toISOString() : new Date().toISOString(),
-      status: order.status === "confirmed" ? "confirmed" : order.status === "delivered" ? "paid" : "pending",
+      date: orderDate,
+      status: (order.status || "confirmed").toLowerCase(),
       payer: {
-        name: order.address?.name || "Verified Customer",
-        method: order.type === "bulk" ? "B2B Wholesale Invoice" : (order.paymentId ? "Razorpay Gateway" : "Online"),
+        name: order.address?.name || order.userName || order.customerName || (isBulk ? "Verified Wholesale Partner" : "Retail Customer"),
+        method: isBulk ? "B2B Netbanking / IMPS Verified" : (order.paymentId ? "Razorpay Gateway" : "Online Prepaid"),
         last4: order.paymentId ? order.paymentId.slice(-4) : "4242",
       },
-      items: order.items || [],
-      verificationCode: `CF-${(order.id || "ORD").slice(-8).toUpperCase()}-AUTH`,
+      items: formattedItems,
+      verificationCode: `CF-${shortId}-AUTH`,
     };
   }
 
   const currentData =
-    activeTab === "current" && realInvoiceData
+    order && realInvoiceData
+      ? realInvoiceData
+      : activeTab === "current" && realInvoiceData
       ? realInvoiceData
       : activeTab === "sample1"
       ? SAMPLE_SUCCESS
@@ -93,7 +120,7 @@ export default function InvoicePreviewModal({
           {/* Top Bar */}
           <View style={styles.topBar}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={styles.topTitle}>🧾 Animated Receipt Printer</Text>
+              <Text style={styles.topTitle}>🧾 {order ? "Official Order Invoice" : "Receipt Printer"}</Text>
               <TouchableOpacity
                 style={[styles.motionBadge, reducedMotion && styles.motionBadgeActive]}
                 onPress={() => setReducedMotion((p) => !p)}
@@ -108,37 +135,28 @@ export default function InvoicePreviewModal({
             </TouchableOpacity>
           </View>
 
-          {/* Tab Selector to cycle demo samples or view current order */}
-          <View style={styles.tabSelector}>
-            {realInvoiceData && (
+          {/* Tab Selector ONLY shown in standalone demo mode when no real order is active */}
+          {!order && (
+            <View style={styles.tabSelector}>
               <TouchableOpacity
-                style={[styles.tabBtn, activeTab === "current" && styles.tabBtnActive]}
-                onPress={() => setActiveTab("current")}
+                style={[styles.tabBtn, activeTab === "sample1" && styles.tabBtnActive]}
+                onPress={() => setActiveTab("sample1")}
               >
-                <Text style={[styles.tabBtnText, activeTab === "current" && styles.tabBtnTextActive]}>
-                  Current Order
+                <Text style={[styles.tabBtnText, activeTab === "sample1" && styles.tabBtnTextActive]}>
+                  Sample: Retail
                 </Text>
               </TouchableOpacity>
-            )}
 
-            <TouchableOpacity
-              style={[styles.tabBtn, activeTab === "sample1" && styles.tabBtnActive]}
-              onPress={() => setActiveTab("sample1")}
-            >
-              <Text style={[styles.tabBtnText, activeTab === "sample1" && styles.tabBtnTextActive]}>
-                Demo: Gold (Retail)
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tabBtn, activeTab === "sample2" && styles.tabBtnActive]}
-              onPress={() => setActiveTab("sample2")}
-            >
-              <Text style={[styles.tabBtnText, activeTab === "sample2" && styles.tabBtnTextActive]}>
-                Demo: Slate (B2B)
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.tabBtn, activeTab === "sample2" && styles.tabBtnActive]}
+                onPress={() => setActiveTab("sample2")}
+              >
+                <Text style={[styles.tabBtnText, activeTab === "sample2" && styles.tabBtnTextActive]}>
+                  Sample: B2B Wholesale
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Main Printable Receipt Component */}
           <ScrollView

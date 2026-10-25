@@ -10,6 +10,10 @@ on:
         description: 'Optional Product ID to post (skips rotation and does not advance state)'
         required: false
         type: string
+      IMAGE_SOURCE:
+        description: 'Optional image source (ai, catalog, pollinations)'
+        required: false
+        type: string
 
 jobs:
   daily-post:
@@ -34,6 +38,7 @@ jobs:
         env:
           NODE_PATH: server/node_modules
           PRODUCT_ID: ${{ inputs.PRODUCT_ID || '' }}
+          IMAGE_SOURCE: ${{ inputs.IMAGE_SOURCE || '' }}
           SERVER_URL: ${{ secrets.SERVER_URL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
