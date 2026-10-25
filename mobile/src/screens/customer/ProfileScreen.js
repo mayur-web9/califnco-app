@@ -101,11 +101,22 @@ export default function ProfileScreen() {
         <View style={[s.avatar, { backgroundColor: theme.accent }]}>
           <Text style={s.avatarText}>{profile?.name?.charAt(0).toUpperCase() || "U"}</Text>
         </View>
-        <Text style={[s.name, { color: isDark ? theme.text : "#fff" }]}>{profile?.name}</Text>
-        <View style={[s.roleBadge, { backgroundColor: theme.chipBg }]}>
-          <Text style={[s.roleText, { color: theme.chipText }]}>{profile?.role}</Text>
+        <Text style={[s.name, { color: isDark ? theme.text : "#fff", marginTop: 8 }]}>{profile?.name || "Califnco User"}</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap", justifyContent: "center" }}>
+          <View style={[s.roleBadge, { backgroundColor: theme.chipBg }]}>
+            <Text style={[s.roleText, { color: theme.chipText }]}>
+              {profile?.role === "Admin" ? "👑 EXECUTIVE ADMIN" : profile?.role === "Dealer" ? "🏷️ WHOLESALE DEALER" : "💧 RETAIL CONSUMER"}
+            </Text>
+          </View>
+          {profile?.role === "Dealer" && (
+            <View style={[s.roleBadge, { backgroundColor: profile?.dealerStatus === "approved" ? "#dcfce7" : "#fef3c7" }]}>
+              <Text style={[s.roleText, { color: profile?.dealerStatus === "approved" ? "#16a34a" : "#b45309" }]}>
+                {profile?.dealerStatus === "approved" ? "✓ APPROVED PARTNER" : "⏳ PENDING REVIEW"}
+              </Text>
+            </View>
+          )}
         </View>
-        <Text style={[s.email, { color: isDark ? theme.textSecondary : "rgba(255,255,255,0.7)" }]}>
+        <Text style={[s.email, { color: isDark ? theme.textSecondary : "rgba(255,255,255,0.7)", marginTop: 6 }]}>
           {profile?.email}
         </Text>
       </View>

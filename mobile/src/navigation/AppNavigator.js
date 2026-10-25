@@ -26,6 +26,11 @@ import ProfileScreen from "../screens/customer/ProfileScreen";
 import DealerCatalogScreen from "../screens/dealer/DealerCatalogScreen";
 import DealerOrdersScreen from "../screens/dealer/DealerOrdersScreen";
 
+// Admin screens
+import AdminDashboardScreen from "../screens/admin/AdminDashboardScreen";
+import AdminDealerApprovalsScreen from "../screens/admin/AdminDealerApprovalsScreen";
+import AdminOrdersScreen from "../screens/admin/AdminOrdersScreen";
+
 // Shared
 import PendingApprovalScreen from "../screens/shared/PendingApprovalScreen";
 
@@ -152,6 +157,47 @@ function DealerTabs() {
   );
 }
 
+function AdminTabs() {
+  const { theme, isDark } = useTheme();
+
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: isDark ? theme.accent : theme.primary,
+        tabBarInactiveTintColor: theme.textMuted,
+        tabBarStyle: {
+          backgroundColor: theme.tabBarBg,
+          borderTopColor: theme.tabBarBorder
+        },
+        headerStyle: { backgroundColor: theme.headerBg },
+        headerTintColor: theme.headerText,
+        headerTitleStyle: { fontWeight: "700" }
+      }}
+    >
+      <Tab.Screen
+        name="AdminDashboard"
+        component={AdminDashboardScreen}
+        options={{ title: "Admin Operations", tabBarIcon: ({ color, size }) => <MaterialIcons name="dashboard" size={size} color={color} />, tabBarLabel: "Dashboard" }}
+      />
+      <Tab.Screen
+        name="AdminDealers"
+        component={AdminDealerApprovalsScreen}
+        options={{ title: "Dealer Approvals", tabBarIcon: ({ color, size }) => <MaterialIcons name="badge" size={size} color={color} />, tabBarLabel: "Dealers" }}
+      />
+      <Tab.Screen
+        name="AdminOrders"
+        component={AdminOrdersScreen}
+        options={{ title: "Fulfillment Orders", tabBarIcon: ({ color, size }) => <MaterialIcons name="local-shipping" size={size} color={color} />, tabBarLabel: "Orders" }}
+      />
+      <Tab.Screen
+        name="AdminProfile"
+        component={ProfileScreen}
+        options={{ title: "Admin Profile", headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />, tabBarLabel: "Profile" }}
+      />
+    </Tab.Navigator>
+  );
+}
+
 function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -175,13 +221,28 @@ export default function AppNavigator() {
 
   function renderRoot() {
     if (!user || !profile) return <AuthStack />;
-    if (profile.role === "Dealer" && profile.dealerStatus === "pending") return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
-      </Stack.Navigator>
-    );
-    if (profile.role === "Dealer" && profile.dealerStatus === "approved") return <DealerTabs />;
-    // Customer or Admin (admin uses admin-web, but if they log in to mobile they see customer view)
+
+    const role = (profile.role || "").toLowerCase().trim();
+    const dealerStatus = (profile.dealerStatus || "").toLowerCase().trim();
+
+    // 1. Executive Admin Experience
+    if (role === "admin") {
+      return <AdminTabs />;
+    }
+
+    // 2. Dealer Experience
+    if (role === "dealer") {
+      if (dealerStatus === "pending" || !dealerStatus) {
+        return (
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
+          </Stack.Navigator>
+        );
+      }
+      return <DealerTabs />;
+    }
+
+    // 3. Retail Consumer Experience
     return <CustomerTabs />;
   }
 

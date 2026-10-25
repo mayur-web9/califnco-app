@@ -1,51 +1,23 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { logout } from "../../services/authService";
 import { useAuth } from "../../hooks/useAuth";
-import { auth } from "../../config/firebase";
 import colors from "../../constants/colors";
-
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL || "http://localhost:3001";
 
 export default function PendingApprovalScreen() {
   const { profile, refreshProfile } = useAuth();
   const [checking, setChecking] = useState(false);
-  const [activating, setActivating] = useState(false);
 
   async function handleCheckStatus() {
     setChecking(true);
     try {
       await refreshProfile();
-      Alert.alert("Status Refreshed", "If your account has been approved by admin, your wholesale portal will open automatically.");
+      Alert.alert("Status Refreshed", "Your account status has been checked with the Califnco server.");
     } catch (err) {
       Alert.alert("Notice", err.message);
     } finally {
       setChecking(false);
-    }
-  }
-
-  async function handleInstantActivateDemo() {
-    setActivating(true);
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`${SERVER_URL}/dealers/approve`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ userId: profile?.uid })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Could not activate dealer account.");
-      }
-      await refreshProfile();
-      Alert.alert("Dealer Mode Activated! ⚡", "Your dealer account is now approved. Entering the B2B Wholesale Portal.");
-    } catch (err) {
-      Alert.alert("Activation Notice", err.message);
-    } finally {
-      setActivating(false);
     }
   }
 
@@ -58,52 +30,90 @@ export default function PendingApprovalScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <ScrollView contentContainerStyle={s.container}>
       <View style={s.iconWrap}>
-        <Text style={s.icon}>⏳</Text>
+        <MaterialIcons name="hourglass-top" size={44} color="#d97706" />
       </View>
-      <Text style={s.title}>Approval Pending</Text>
+      <Text style={s.title}>Wholesale Application Pending</Text>
       <Text style={s.body}>
-        Your dealer account has been registered and is awaiting admin approval.
-        {"\n\n"}
-        You will be notified once your account is approved. Wholesale prices and bulk ordering will activate immediately.
+        Your commercial B2B dealer registration has been submitted and is currently under review by the Califnco operations desk.
       </Text>
 
-      <View style={s.infoBox}>
-        <Text style={s.infoText}>What happens next?</Text>
-        <Text style={s.infoItem}>• Admin reviews your dealer profile</Text>
-        <Text style={s.infoItem}>• Tier-1 wholesale pricing unlocks across catalog</Text>
-        <Text style={s.infoItem}>• Dedicated B2B bulk orders enabled</Text>
+      {/* 4-Step Verification Stepper */}
+      <View style={s.stepperBox}>
+        <Text style={s.stepperTitle}>Verification & Activation Steps</Text>
+
+        <View style={s.stepRow}>
+          <MaterialIcons name="check-circle" size={20} color="#16a34a" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={s.stepName}>1. Account Registered</Text>
+            <Text style={s.stepDesc}>Profile and credentials created in Califnco system.</Text>
+          </View>
+        </View>
+
+        <View style={s.stepRow}>
+          <MaterialIcons name="radio-button-checked" size={20} color="#d97706" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={s.stepName}>2. Admin Review (Current Step)</Text>
+            <Text style={s.stepDesc}>Evaluating business details, regional territory, and GST.</Text>
+          </View>
+        </View>
+
+        <View style={s.stepRow}>
+          <MaterialIcons name="radio-button-unchecked" size={20} color="#9ca3af" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={s.stepName}>3. Wholesale Pricing Tier Unlocked</Text>
+            <Text style={s.stepDesc}>20% to 35% discount margin applied to all 52 products.</Text>
+          </View>
+        </View>
+
+        <View style={s.stepRow}>
+          <MaterialIcons name="radio-button-unchecked" size={20} color="#9ca3af" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={s.stepName}>4. B2B Bulk Order Dispatch Access</Text>
+            <Text style={s.stepDesc}>Place wholesale bulk consignments with credit terms.</Text>
+          </View>
+        </View>
       </View>
 
-      <TouchableOpacity style={s.checkBtn} onPress={handleCheckStatus} disabled={checking || activating}>
-        {checking ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.checkBtnText}>Check Approval Status ⟳</Text>}
-      </TouchableOpacity>
+      {/* Submitted Details Card */}
+      <View style={s.card}>
+        <Text style={s.cardHeader}>Applicant Details on File</Text>
+        <Text style={s.cardItem}><Text style={s.bold}>Business Name: </Text>{profile?.displayName || profile?.name || "Kiran Enterprises"}</Text>
+        <Text style={s.cardItem}><Text style={s.bold}>Email: </Text>{profile?.email || "dealer.pending@test.com"}</Text>
+        {profile?.phone && <Text style={s.cardItem}><Text style={s.bold}>Phone: </Text>{profile.phone}</Text>}
+        {profile?.address?.line1 && (
+          <Text style={s.cardItem}><Text style={s.bold}>Address: </Text>{profile.address.line1}, {profile.address.city || ""}</Text>
+        )}
+      </View>
 
-      <TouchableOpacity style={s.demoBtn} onPress={handleInstantActivateDemo} disabled={checking || activating}>
-        {activating ? <ActivityIndicator size="small" color={colors.primary} /> : <Text style={s.demoBtnText}>⚡ Instant Activate Dealer Mode (Demo/Test)</Text>}
+      <TouchableOpacity style={s.checkBtn} onPress={handleCheckStatus} disabled={checking}>
+        {checking ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.checkBtnText}>Refresh Approval Status ⟳</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
         <Text style={s.logoutText}>Sign out</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center", padding: 28 },
-  iconWrap: { width: 88, height: 88, borderRadius: 44, backgroundColor: "#fef3c7", alignItems: "center", justifyContent: "center", marginBottom: 20 },
-  icon: { fontSize: 44 },
-  title: { fontSize: 24, fontWeight: "800", color: colors.text, marginBottom: 10 },
-  body: { fontSize: 14, color: colors.textSecondary, textAlign: "center", lineHeight: 20, marginBottom: 22 },
-  infoBox: { width: "100%", backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 20, borderLeftWidth: 4, borderLeftColor: colors.accent },
-  infoText: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 8 },
-  infoItem: { fontSize: 13, color: colors.textSecondary, marginBottom: 4 },
-  checkBtn: { width: "100%", backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", marginBottom: 10 },
-  checkBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  demoBtn: { width: "100%", backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", marginBottom: 14 },
-  demoBtnText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+  container: { flexGrow: 1, backgroundColor: colors.background, alignItems: "center", padding: 24, paddingTop: 40 },
+  iconWrap: { width: 88, height: 88, borderRadius: 44, backgroundColor: "#fef3c7", alignItems: "center", justifyContent: "center", marginBottom: 16 },
+  title: { fontSize: 20, fontWeight: "800", color: colors.text, marginBottom: 8, textAlign: "center" },
+  body: { fontSize: 13, color: colors.textSecondary, textAlign: "center", lineHeight: 18, marginBottom: 20 },
+  stepperBox: { width: "100%", backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+  stepperTitle: { fontSize: 13, fontWeight: "800", color: colors.text, marginBottom: 12 },
+  stepRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 12 },
+  stepName: { fontSize: 12, fontWeight: "700", color: colors.text },
+  stepDesc: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
+  card: { width: "100%", backgroundColor: colors.card, borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+  cardHeader: { fontSize: 12, fontWeight: "800", color: colors.primary, marginBottom: 8, textTransform: "uppercase" },
+  cardItem: { fontSize: 12, color: colors.text, marginBottom: 4 },
+  bold: { fontWeight: "700" },
+  checkBtn: { width: "100%", backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", marginBottom: 12 },
+  checkBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   logoutBtn: { paddingVertical: 10, paddingHorizontal: 24 },
   logoutText: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" }
 });

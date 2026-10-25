@@ -71,25 +71,35 @@ const CATEGORY_FALLBACKS = {
   Spare: require("../../assets/products/prod_spare_06.jpg")
 };
 
+let CLOUDINARY_IMAGES = {};
+try {
+  CLOUDINARY_IMAGES = require("./cloudinaryImages.json");
+} catch (e) {}
+
 /**
- * Returns a reliable Image source object (guaranteed unique local asset or remote URI)
+ * Returns a reliable Image source object (Cloudinary hosted URL with local asset fallback)
  * @param {object} product - Product model from Firestore
  * @returns {ImageSourcePropType}
  */
 export function getProductImageSource(product) {
   if (!product) return CATEGORY_FALLBACKS.Purifier;
 
-  // 1. Exact unique local high-resolution match by product ID (strictly unique per product)
-  if (product.id && LOCAL_PRODUCT_IMAGES[product.id]) {
-    return LOCAL_PRODUCT_IMAGES[product.id];
-  }
-
-  // 2. Remote valid URL if provided and not generic
+  // 1. Live Cloudinary hosted URL from product document
   if (product.imageUrl && typeof product.imageUrl === "string" && product.imageUrl.startsWith("http")) {
     return { uri: product.imageUrl };
   }
 
-  // 3. Category fallback
+  // 2. Cloudinary hosted URL from mapping
+  if (product.id && CLOUDINARY_IMAGES[product.id]) {
+    return { uri: CLOUDINARY_IMAGES[product.id] };
+  }
+
+  // 3. Exact unique local high-resolution match by product ID
+  if (product.id && LOCAL_PRODUCT_IMAGES[product.id]) {
+    return LOCAL_PRODUCT_IMAGES[product.id];
+  }
+
+  // 4. Category fallback
   if (product.category && CATEGORY_FALLBACKS[product.category]) {
     return CATEGORY_FALLBACKS[product.category];
   }
