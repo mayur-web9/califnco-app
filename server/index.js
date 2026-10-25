@@ -26,10 +26,16 @@ const isPlaceholder = !razorpayKeyId ||
   razorpayKeyId.trim() === "" ||
   razorpayKeySecret.trim() === "";
 
-if (isProduction && isPlaceholder) {
-  console.error("FATAL CONFIGURATION ERROR: Server cannot start in production without valid RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
-  console.error("Missing or placeholder Razorpay keys detected in process.env.");
-  process.exit(1);
+if (isProduction) {
+  if (isPlaceholder) {
+    console.error("FATAL CONFIGURATION ERROR: Server cannot start in production without valid RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+    console.error("Missing or placeholder Razorpay keys detected in process.env.");
+    process.exit(1);
+  }
+  if (!admin || !db || !admin.apps.length) {
+    console.error("FATAL CONFIGURATION ERROR: Server cannot start in production without valid Firebase credentials.");
+    process.exit(1);
+  }
 }
 
 let razorpay = null;
@@ -44,11 +50,55 @@ if (razorpayKeyId && razorpayKeySecret && !isPlaceholder) {
   }
 }
 
+// Rate limiting configuration
+const rateLimit = require("express-rate-limit");
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." }
+});
+
+// Restrict CORS to admin Vercel origin plus mobile app (configurable via ALLOWED_ORIGINS)
+const defaultOrigins = [
+  "https://califnco-app-phi.vercel.app",
+  "https://califnco-app.vercel.app"
+];
+const envOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim()).filter(Boolean)
+  : [];
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Mobile apps and server-to-server calls do not send an Origin header
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith(".vercel.app") ||
+      origin.includes("localhost") ||
+      origin.includes("127.0.0.1")
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error("CORS policy does not allow access from origin " + origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+};
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/public", express.static(path.join(__dirname, "public")));
+
+// Rate-limited routes
+app.use("/payment", apiLimiter);
+app.use("/orders", apiLimiter);
+app.use("/address/search", apiLimiter);
+app.use("/notifications/send", apiLimiter);
 
 // Auth Middleware: Verify Firebase ID Token on protected routes
 async function requireAuth(req, res, next) {
