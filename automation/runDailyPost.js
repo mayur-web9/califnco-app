@@ -225,9 +225,36 @@ function validateImageBuffer(buffer) {
   return isJpeg || isPng;
 }
 
+const CATEGORY_DESCRIPTIONS = {
+  purifier: 'wall-mounted or countertop RO water purifier with a white body, transparent filter housings and a small display',
+  dispenser: 'floor-standing water dispenser with hot and cold taps',
+  pump: 'compact booster pump motor with brass fittings',
+  filter: 'cylindrical water filter cartridge',
+  spare: 'close-up of the named spare part'
+};
+
+function buildImagePrompt(product) {
+  const catKey = (product.category || '').toLowerCase().trim();
+  const visualDesc = CATEGORY_DESCRIPTIONS[catKey] || 'water purification equipment';
+  return `${product.name}, ${visualDesc}, product photo, centred, plain light background, soft studio lighting, sharp focus, no text, no logos, no people, no packaging, no watermark`;
+}
+
+function getProductSeed(productId, productName) {
+  const str = String(productId || productName || 'califnco');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % 1000000;
+}
+
 // 3. Generate image: Hugging Face FLUX.1-schnell first, Pollinations FLUX on failure
 async function generateProductImage(product) {
-  const prompt = `clean product photograph of ${product.name}, white or neutral studio background, no text, no logos, no people, centred`;
+  const prompt = buildImagePrompt(product);
+  const seed = getProductSeed(product.id, product.name);
+  console.log(`  Image prompt: "${prompt}"`);
+  console.log(`  Deterministic seed: ${seed}`);
   const hfKey = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN;
 
   if (isDryRun) {
@@ -275,7 +302,7 @@ async function generateProductImage(product) {
   // Provider 2: Pollinations FLUX engine
   console.log('[Step 3/5] Generating image via Pollinations FLUX...');
   try {
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=flux&width=1080&height=1080&nologo=true`;
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=flux&width=1080&height=1080&nologo=true&seed=${seed}`;
     const res = await fetchWithTimeout(pollinationsUrl, {
       headers: { 'User-Agent': 'Califnco-Automation/1.0' }
     }, 45000);
@@ -387,6 +414,14 @@ async function uploadToCloudinary(imageBuffer, productId) {
 
 // 5. Meta Graph API Publishing
 async function publishToInstagram(instagramImageUrl, caption) {
+  if (isDryRun) {
+    console.log('[Step 5/5] Meta Instagram Publishing: Skipped (dry-run mode)');
+    return {
+      mediaId: 'dry_run_simulated_media',
+      permalink: 'https://www.instagram.com/p/dry_run_simulation/'
+    };
+  }
+
   const metaToken = process.env.META_ACCESS_TOKEN;
   const igUserId = process.env.IG_USER_ID;
   const graphVersion = process.env.META_GRAPH_VERSION || 'v21.0';
