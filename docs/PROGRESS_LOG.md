@@ -412,4 +412,84 @@ Phase 7 — Security Hardening, Multi-Channel Notifications (Brevo, TextBee, FCM
 **Errors:**
 None. All test suites passing cleanly with zero errors.
 
+---
+
+## 2026-10-25 — Final Polish, Security Hardening, Automation & Submission Package
+
+**What was done:**
+1. **Repo Hygiene & Security (P0)**:
+   - Sanitized repository and verified `.gitignore` excludes `.env*`, `serviceAccountKey*.json`, `*adminsdk*.json`, `node_modules/`, `dist/`, `*.apk`, `*.zip`.
+   - Verified `git ls-files` shows only `.env.example` files matching secret patterns.
+   - Removed hardcoded credentials and fake signature fallback patterns across code and test scripts.
+   - In `server/index.js`, added production guard requiring valid non-placeholder Razorpay and Firebase credentials when `NODE_ENV=production`.
+   - Installed and configured `express-rate-limit` on `/payment/*`, `/orders/*`, `/address/search`, and `/notifications/send`.
+   - Configured CORS restricted to admin Vercel domains and mobile clients via `ALLOWED_ORIGINS`.
+   - Added explicit client isolation for `payment_orders` collection in `firestore.rules` (`allow read, write: if false;`). Redeployed ruleset to live Firebase project (`cd32327e-42fb-448b-be06-de36b43a3825`).
+   - Extended `testRulesSecurity.js` to assert that Guests, Customers, and Approved Dealers are strictly blocked from reading or writing `payment_orders`.
+   - Extended `testServerSecurityAndIdempotency.js` and `verifyPhase3.js` to assert that cancelled and failed payments create zero order records in Firestore.
+2. **Automation Engine Overhaul (P1)**:
+   - Updated `automation/runDailyPost.js` with strict factual copywriting: prompts Groq using only catalog facts (`name`, `category`, `price`, `description`), forbids invented discounts, "festive offers", percentage claims, installation promises, and health claims. Strips all markdown (`**`, `#`, backticks), producing 2 to 4 lines, 1 CTA mentioning Califnco app, and 5 to 8 hashtags under 2,000 characters.
+   - Dynamic Groq model selection at runtime: discovers active models via `GET /openai/v1/models`, testing for `llama-3.3-70b-versatile` with active fallback (`openai/gpt-oss-120b`), removing nonexistent entries, and logging the model actually used.
+   - Generative product imagery: attempts Hugging Face `FLUX.1-schnell` router endpoint first, falling back to Pollinations FLUX. Validates that generated buffer is a valid JPEG/PNG > 10 KB. Strictly forbids substituting catalog photos.
+   - Signed Cloudinary upload using SDK: uploads to `califnco/daily-posts` with public ID `<productId>-<YYYYMMDD>`, overwrite true. Formats 1:1 Instagram transform URL (`/upload/f_jpg,c_fill,ar_1:1,w_1080,q_auto/`) and verifies with a `HEAD` request (confirmed HTTP 200 `image/jpeg`).
+   - Meta Graph API posting: creates media container, polls status until `FINISHED`, publishes, and prints permalink. When Meta credentials are not configured, prints `NOT POSTED: Meta credentials missing (META_ACCESS_TOKEN, IG_USER_ID)` and exits with code 2.
+   - Created `.github/workflows/daily-post.yml` scheduled daily at 10:00 AM IST (`cron: '30 4 * * *'`) with manual `workflow_dispatch`.
+   - Updated `automation/workflow.json`, `automation/README.md`, and `docs/ALTERNATIVES.md`.
+3. **Notifications Hardening (P2)**:
+   - Created `server/scripts/testNotifications.js` to dispatch real Brevo email and TextBee SMS. Correctly reports `BLOCKED` when user credentials are not provided.
+   - Verified that order confirmation and status changes trigger multi-channel notifications inside non-blocking try-catch blocks where failure in any channel never fails the order or status update.
+   - Verified `fcmToken` registration in `users/{uid}.fcmToken` upon login with non-crashing permission handling.
+4. **Mobile & Admin Polish (P3)**:
+   - Configured `userInterfaceStyle: "automatic"` in `mobile/app.json` and integrated system color scheme detection in `mobile/src/hooks/useTheme.js`.
+   - Verified pinch and double-tap zoom on `ProductDetailScreen.js` using native `ScrollView` with zero external native modules.
+   - Verified cancel, failure, and missing-signature error handling and 45s server wake-up timeout in `CheckoutScreen.js`.
+   - Verified pending dealer hold screen and approved dealer wholesale portal. Added `RETAIL` vs `BULK` type badges on customer and dealer order history screens.
+   - Verified admin role gate, dealer approval/rejection, orders list, and service tickets in `admin-web`. Executed `npm run build` in `admin-web` with zero errors (built in 4.24s).
+   - Confirmed total image assets are optimized to 5.38 MB (down from 148 MB).
+5. **Documentation & Verification Checklist (P4)**:
+   - Updated `docs/EXPLAINED.md` with complete technical walkthroughs and review questions for all 5 modules.
+   - Created `docs/evidence/README.md` listing required screenshots.
+   - Updated `docs/SUBMISSION.md`.
+
+**Files changed:**
+- .gitignore
+- .github/workflows/daily-post.yml (new)
+- firestore.rules
+- server/index.js
+- server/package.json
+- server/package-lock.json
+- server/scripts/deployRules.js
+- server/scripts/testRulesSecurity.js
+- server/scripts/testServerSecurityAndIdempotency.js
+- server/scripts/verifyPhase3.js
+- server/scripts/testNotifications.js (new)
+- server/scripts/testAiEndpoints.js
+- automation/runDailyPost.js
+- automation/workflow.json
+- automation/README.md
+- mobile/app.json
+- mobile/src/config/firebase.js
+- mobile/src/hooks/useTheme.js
+- mobile/src/screens/customer/CheckoutScreen.js
+- mobile/src/screens/customer/OrdersScreen.js
+- mobile/src/screens/dealer/DealerOrdersScreen.js
+- docs/ALTERNATIVES.md
+- docs/EXPLAINED.md
+- docs/evidence/README.md (new)
+- docs/PROGRESS_LOG.md
+
+**How tested:**
+- `node server/scripts/testRulesSecurity.js`: **27/27 PASSED** (permission denied on client access to `payment_orders`, unauthorized order writes, role escalation).
+- `node server/scripts/testServerSecurityAndIdempotency.js`: **28/28 PASSED** (token verification, idempotency duplicate handling, transactional stock rollback, cancelled/failed payment isolation).
+- `node server/scripts/verifyPhase3.js`: **31/31 PASSED** (price recomputation, tamper rejection, cancelled payment check, dealer bulk order).
+- `node server/scripts/deployRules.js`: **SUCCESS** (deployed ruleset cd32327e-42fb-448b-be06-de36b43a3825).
+- `node automation/runDailyPost.js`: **SUCCESSFUL REAL RUN** (fetched "AquaCompact Tabletop Portable RO" prod_purifier_09 from Render catalog, generated factual Groq caption via openai/gpt-oss-120b, synthesized image via Pollinations FLUX, uploaded signed image to Cloudinary, verified HTTP 200 HEAD check, logged `NOT POSTED: Meta credentials missing`).
+- `node automation/runDailyPost.js --dry-run`: **SUCCESSFUL DRY RUN** (deterministic factual generation conforming to negative constraints).
+- `node server/scripts/testNotifications.js`: Tested and verified proper `BLOCKED` exit code when user credentials are not provided.
+- `npm run build` in `admin-web`: **SUCCESS** (built in 4.24s).
+
+**What is BLOCKED:**
+1. **Instagram Feed Publishing**: Blocked pending user's Meta Graph API credentials (`META_ACCESS_TOKEN` and `IG_USER_ID`).
+2. **Real Email & SMS Dispatch Test**: Blocked pending user's test targets and provider keys (`TEST_EMAIL`, `BREVO_API_KEY`, `TEST_PHONE`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`).
+
 

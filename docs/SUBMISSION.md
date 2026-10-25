@@ -1,42 +1,43 @@
-# Califnco Submission & Testing Guide
+# Califnco Submission & Verification Guide
 
-**Candidate:** Mayur  
-**Repository:** https://github.com/mayur-web9/califnco-app  
-**Company:** Califnco Water Systems  
-**Evaluator:** Al Amin  
-**Deadline:** 25 October 2026, 11:59 PM IST  
+Candidate: Mayur  
+Repository: https://github.com/mayur-web9/califnco-app  
+Company: Califnco Water Systems  
+Evaluator: Al Amin  
+Submission Date: 25 October 2026  
 
 ---
 
-## 1. Project Links & Assets
+## 1. Project Links & Deliverables
 
-| Asset | Location / URL | Status |
+| Deliverable | URL / Path | Notes |
 | :--- | :--- | :--- |
-| **GitHub Repository** | `https://github.com/mayur-web9/califnco-app` | Verified (`main` branch) |
-| **Admin Web Portal** | `https://califnco-app-phi.vercel.app` | **LIVE on Vercel** 🎉 |
-| **Backend REST API** | `https://califnco-app.onrender.com` (Health: `https://califnco-app.onrender.com/health`) | **LIVE on Render** 🎉 |
-| **Mobile Application (APK v2)** | [Download Android APK](https://expo.dev/artifacts/eas/0CE54Nq4YFMHztXnvg6rSMadDKrIyU8INncF5MAhn7s.apk) (Build `8ab46fe7`) | **Updated & Verified** 🎉 |
-| **n8n Automation Workflow** | `automation/workflow.json` | Tested (Groq + FLUX.1-schnell) |
-| **Clean ZIP Submission** | `califnco-submission-clean.zip` | Sanitized (Zero secrets/keys) |
+| **GitHub Repository** | `https://github.com/mayur-web9/califnco-app` | Verified on `main` branch |
+| **Admin Web Portal** | `https://califnco-app-phi.vercel.app` | Hosted on Vercel |
+| **Backend REST API** | `https://califnco-app.onrender.com` | Health endpoint: `https://califnco-app.onrender.com/health` |
+| **Standalone Android APK** | [Download APK](https://expo.dev/artifacts/eas/0CE54Nq4YFMHztXnvg6rSMadDKrIyU8INncF5MAhn7s.apk) | Build ID: `8ab46fe7` via EAS Cloud |
+| **Clean ZIP Submission Archive** | `califnco-submission-clean.zip` | Root directory (zero secrets, zero node_modules) |
+| **Automation Workflow (n8n)** | `automation/workflow.json` | 1-click importable workflow file |
+| **GitHub Actions Workflow** | `.github/workflows/daily-post.yml` | Scheduled daily at 10:00 AM IST (04:30 UTC) |
 
 ---
 
-## 2. Test Credentials & Authentication
+## 2. Test Account Credentials
 
-Use these pre-seeded test accounts in Firebase Auth for evaluation across the Admin Web Portal and Mobile App.
+Pre-seeded accounts in Firebase Auth and Firestore (`users/{uid}`):
 
-| Role | Email | Password | Access Scope & Expected Behavior |
+| Role | Email | Password | Access Scope |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@test.com` | `Admin@123456` | **Full Administrative Access**: Logs into the Admin Web Portal (`admin-web`). Can view financial KPI cards, manage product inventory and wholesale prices, approve or reject dealer applications, change order statuses (confirmed -> shipped -> delivered), and assign service technicians to customer tickets. |
-| **Approved Dealer** | `dealer@test.com` | `Dealer@123456` | **B2B Wholesale Portal**: Approved dealer account (`dealerStatus: "approved"`). Logs into the Mobile App to unlock the wholesale catalog (`wholesale/` collection), discounted bulk pricing, minimum order quantity rules (`minQty`), and places bulk orders via server route `POST /orders/bulk`. |
-| **Pending Dealer** | `dealer.pending@test.com` | `Dealer@123456` | **Pending Approval Flow**: Newly registered dealer (`dealerStatus: "pending"`). Mobile app locks navigation to `PendingApprovalScreen`. If an attacker attempts to call `POST /orders/bulk`, the server independently blocks them with HTTP `403 Forbidden`. |
-| **Customer** | `customer@test.com` | `Customer@123456` | **B2C Retail Experience**: Standard retail customer. Browses retail products (`products/`), adds items to cart, checks out with server-computed tamper-proof Razorpay payment, receives multi-channel order notifications, tracks orders in real time, and books service requests. |
+| **Admin** | `admin@test.com` | `Admin@123456` | Full administrative access to the Vercel admin dashboard. Manages orders, reviews and approves/rejects dealer applications, updates ticket statuses. Non-admin users are strictly blocked. |
+| **Approved Dealer** | `dealer@test.com` | `Dealer@123456` | Logs into mobile app to view wholesale pricing, minimum order quantities (`minQty`), and places bulk orders via `POST /orders/bulk`. |
+| **Pending Dealer** | `dealer.pending@test.com` | `Dealer@123456` | Newly registered dealer awaiting review. Locked to pending approval hold screen; server blocks wholesale orders with HTTP 403 Forbidden. |
+| **Customer** | `customer@test.com` | `Customer@123456` | Retail customer. Browses products, adds items to cart, completes tamper-proof Razorpay checkout, tracks orders, and books service requests. |
 
 ---
 
-## 3. Payment Gateway Testing (Razorpay Test Mode)
+## 3. Razorpay Payment Gateway Testing
 
-Use the following Razorpay test credentials when verifying the tamper-proof checkout flow:
+Use the following Razorpay sandbox test credentials during mobile checkout:
 
 - **Card Number**: `4111 1111 1111 1111`
 - **Expiry Date**: Any future date (e.g., `12/30`)
@@ -45,47 +46,45 @@ Use the following Razorpay test credentials when verifying the tamper-proof chec
 
 ---
 
-## 4. What Works (Verified Test Results)
+## 4. Test Verification Summary
 
-1. **Security & Server Idempotency**:
-   - `server/scripts/testServerSecurityAndIdempotency.js`: **25/25 PASSED**.
-   - Mandatory Firebase ID token verification on all protected endpoints (`401 Unauthorized` without token).
-   - Role-based authorization (`403 Forbidden` for retail customers and pending dealers calling `/orders/bulk`).
-   - Idempotent payment verification (duplicate `/payment/verify` calls return existing confirmed order without re-decrementing inventory).
-   - Atomic inventory stock decrement and rollback inside Firestore transactions (`db.runTransaction`).
-2. **Phase 3 Verification**:
-   - `server/scripts/verifyPhase3.js`: **25/25 PASSED**.
-   - Server-side price recomputation (`/payment/create-order` and `/orders/bulk`).
-   - HMAC SHA-256 signature verification.
-   - Address geocoding proxy (`/address/search`) using OpenStreetMap Nominatim with compliant User-Agent headers.
-3. **Multi-Channel Notifications (Email, SMS, FCM)**:
-   - `server/scripts/testNotificationService.js`: **6/6 PASSED**.
-   - Transactional Email via Brevo REST API v3 / SMTP.
-   - Transactional SMS via TextBee Free Android Gateway (bypassing India TRAI DLT regulations).
-   - `server/scripts/testFcmAndServicePush.js`: **9/9 PASSED**.
-   - Native device FCM push token registration in `users/{uid}.fcmToken`.
-   - Real-time FCM push notification triggers on order status changes (`PATCH /orders/:id/status`) and service request updates (`PATCH /services/:id/status`).
-4. **Mobile Features & Polish**:
-   - **Dark Mode**: Persistent dark obsidian theme with instant toggle switch in `ProfileScreen.js` backed by `AsyncStorage`.
-   - **Pinch-to-Zoom**: Fullscreen product image viewer in `ProductDetailScreen.js` with multi-touch pinch zoom (up to 4x).
-   - **Referral & Rewards System Card**: Added in `ProfileScreen.js` ("Refer & Earn ₹500", custom referral code, tap-to-copy, direct native sharing, rewards tracking) for the +5 App Polish bonus.
-   - **Animated Invoice Preview & Native Printing**: Reusable `PrintedReceipt.js` component with native OS print spooler ("Save as PDF", direct Wi-Fi printing) and share action.
-   - **Dealer Flow**: Automatic routing between Retail Catalog, Pending Approval Screen, and Wholesale B2B Bulk Order Screen.
-5. **Admin Web Portal**:
-   - Real-time Firestore synchronization for orders, inventory, wholesale pricing, dealer approvals, and service tickets.
-   - Dark/Light mode theme toggle.
-   - Clean authentication with zero pre-filled hardcoded credentials.
-6. **AI & Social Automation (25 pts + 10 Bonus pts)**:
-   - Automated product promotion workflow (`automation/workflow.json`).
-   - Standalone CLI automation runner (`node automation/runDailyPost.js` or `npm run automation:run`) for 1-command verification without setting up n8n.
-   - Groq AI copywriting with supported `llama-3.3-70b-versatile` model.
-   - Image generation with Hugging Face Serverless Router (`FLUX.1-schnell`).
-   - WhatsApp Status broadcast via WAHA container integration (+10 bonus points).
+Command lines and real test suite results executed in this repository:
+
+1. **Firestore Client Security Rules (`node server/scripts/testRulesSecurity.js`)**:
+   - **27/27 PASSED**
+   - Asserts that unauthorized clients (Guests, Customers, Dealers) receive `permission-denied` on:
+     - Reading or writing `payment_orders`
+     - Reading `wholesale/` (permitted only for approved dealers & admins)
+     - Creating orders directly from the client (`allow create: if false`)
+     - Modifying sensitive user profile fields (`role`, `dealerStatus`)
+2. **Server Auth, Idempotency & Transactions (`node server/scripts/testServerSecurityAndIdempotency.js`)**:
+   - **28/28 PASSED**
+   - Mandatory Bearer token authentication (401 without token)
+   - Role enforcement (403 for customers/pending dealers on `/orders/bulk`)
+   - Idempotent payment verification (duplicate calls return existing order without double-decrementing stock)
+   - Atomic inventory stock decrement and transaction rollback on insufficient stock
+   - Cancelled and failed payments create zero order documents in Firestore
+3. **Phase 3 Integration (`node server/scripts/verifyPhase3.js`)**:
+   - **31/31 PASSED**
+   - Server-side price recomputation
+   - HMAC SHA256 signature verification
+   - Tampered client items in request body are discarded in favor of server-stored session records
+   - Nominatim address lookup proxy
+4. **Daily Post Automation (`node automation/runDailyPost.js`)**:
+   - Live execution successfully retrieved next product (`prod_purifier_09`) from live Render catalog rotation
+   - Generated factual caption via Groq (`openai/gpt-oss-120b`) without invented claims or discounts
+   - Synthesized product image via Pollinations FLUX (29.0 KB valid JPEG)
+   - Uploaded to Cloudinary with signed credentials (`califnco/daily-posts`)
+   - Confirmed transformed 1:1 Instagram image URL returns HTTP 200 and `image/jpeg` via HEAD request
+   - Reported `NOT POSTED: Meta credentials missing (META_ACCESS_TOKEN, IG_USER_ID)` and exited with code 2
+5. **Admin Web Portal Build (`npm run build` in `admin-web`)**:
+   - Built cleanly with Vite in 4.24s with zero compilation or lint errors.
 
 ---
 
-## 5. Security & Secret Protection
+## 5. Known Limitations & Blocked Items
 
-- All `.env` files and `*serviceAccountKey*.json` files are strictly excluded via `.gitignore`.
-- Automated packaging script `server/scripts/packageSubmission.js` builds clean release archives `califnco-submission-clean.zip` with zero secrets, keys, or node_modules.
-- Server enforces startup exit (`process.exit(1)`) in production environments if Razorpay keys are missing or placeholders.
+- **Instagram Live Publishing**: Marked **BLOCKED**. The automation pipeline is fully implemented and tested through step 4 (Cloudinary upload and verified HEAD check). Live publication to an Instagram Feed requires the user's personal Meta Developer Account credentials (`META_ACCESS_TOKEN` with `instagram_content_publish` permission and `IG_USER_ID`). In the absence of these variables, `runDailyPost.js` outputs `NOT POSTED: Meta credentials missing (META_ACCESS_TOKEN, IG_USER_ID)` and exits with code 2 as specified in the assignment requirements.
+- **Push Notifications on Real Devices**: In Expo Go and local development, remote FCM push notifications are simulated via mock tokens without crashing. Receiving native background push banners on an Android device requires running the standalone built preview APK configured with `google-services.json`.
+- **Live Transactional Email & SMS Dispatch**: Marked **BLOCKED**. Real provider dispatches require user-supplied keys (`BREVO_API_KEY`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`, `TEST_EMAIL`, `TEST_PHONE`). The verification script `node server/scripts/testNotifications.js` exits non-zero and reports `BLOCKED` when these keys are not set. In server operations, notification dispatches run inside unawaited, non-blocking try-catch blocks; missing provider keys log payloads gracefully without causing transactions to fail.
+- **Render Server Free-Tier Cold Starts**: Render's free compute tier spins down inactive web services. An initial cold-start request can take 30 to 45 seconds to wake up the server. Both the mobile app checkout flow and the automation catalog fetch implement 45 to 60-second timeouts with retry logic to handle cold starts cleanly.

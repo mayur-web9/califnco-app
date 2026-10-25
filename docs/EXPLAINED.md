@@ -1,283 +1,189 @@
-# Explained — How It Works (Plain English)
+# Explained — Architecture & Technical Defense Guide
 
-I wrote this so I can explain every part of this project in a review without stumbling. Each section covers what the feature does, how data flows, which files matter, why I made this design choice, and the questions I expect to be asked.
+I wrote this document in plain first-person language to explain every architectural decision, data flow, and code path across the entire Califnco platform during technical reviews.
 
 ---
 
-## Module: Mobile App
+## 1. Module: Mobile App (React Native & Expo SDK 51)
 
-### What it does
-The mobile application is built with Expo React Native (SDK 51). It provides a full-featured customer shopping experience and a dedicated wholesale portal for verified dealers:
-1. **Catalog & Search**: Customers can browse water purifiers, dispensers, pumps, filters, and spare parts. Filter by category pill or search via real-time keyword query.
-2. **Product Details**: Shows high-resolution product imagery, star ratings, review counts, stock availability indicators, quantity controls, and one-touch "Add to Cart" or "Buy Now".
-3. **Cart & Checkout**: Global reactive shopping cart with quantity increment/decrement, line-item totals, and complete delivery address validation (with 6-digit Indian PIN code check).
-4. **Order Tracking**: Real-time listing of customer orders with formatted currency (INR), date timestamps, item summaries, and status color badges (`pending`, `confirmed`, `dispatched`, `delivered`, `cancelled`).
-5. **Service Booking**: Dual-tab interface allowing customers to request technician home visits (contact phone, address, and issue description) and track the status of past service requests.
-6. **Profile Management**: Displays user details, role badge, and allows editing saved delivery address information.
-7. **Role-Based Experience**: Dynamically transitions UI depending on whether the user is a Customer, a Pending Dealer (shows approval hold screen), or an Approved Dealer (shows wholesale catalog with minimum order quantities).
+### What I built
+I built the mobile frontend using React Native 0.74 on Expo SDK 51. The app serves two primary personas: retail customers and verified wholesale dealers.
+- **Retail Catalog**: Displays all domestic water purifiers, alkaline systems, and spare cartridges with categorized navigation and client-side reactive filtering.
+- **Product Detail**: Features zoomable product imagery (pinch-to-zoom and double-tap zoom via native `ScrollView` with zero external native modules), technical specifications, live stock indicators, quantity selectors, and animated Add-to-Cart interactions.
+- **Checkout & Razorpay Payment**: Secure in-app payment flow via a clean WebView modal that interacts with the server, handles cancellations, network delays, and payment failures without creating orphan orders.
+- **Order Tracking & Receipt Generator**: Live order history with clear `RETAIL` vs `BULK` type labels, real-time status chips, and an in-app printable receipt/invoice modal.
+- **Service Desk**: Dual-tab booking interface for scheduling home service, filter maintenance, and water quality testing visits.
+- **Dealer Flow**: Automatic routing that presents a pending hold screen for unverified dealers and unlocks the wholesale pricing portal once approved by an administrator.
 
 ### How data flows
-1. **Authentication Flow**:
-   - `AuthProvider` wraps the root application and listens to Firebase `onAuthStateChanged`.
-   - Once Firebase Auth resolves, `getUserProfile(uid)` fetches the user's document from Firestore (`users/{uid}`) to determine their role and `dealerStatus`.
-   - `AppNavigator` uses this state to switch between `AuthStack`, `CustomerTabs`, `DealerTabs`, or `PendingApprovalScreen`.
-2. **Catalog Flow**:
-   - `CatalogScreen` calls `getProducts()` which queries `products` ordered by name.
-   - Category filtering and search queries run reactively via `useMemo` for instant client-side responsiveness.
-3. **Checkout & Order Flow**:
-   - When the user taps checkout, `CheckoutScreen` validates the address and requests a payment order from the backend server (`POST /payment/create-order`).
-   - Upon payment confirmation (simulated in test mode or via Razorpay SDK), `createOrder()` writes an order document to Firestore `orders` with `type: "retail"`, `userId: profile.uid`, line items, and timestamp.
-   - The cart is emptied, and the user is redirected to the `OrdersScreen`.
+1. **Authentication**: `AuthProvider` listens to Firebase Auth's `onAuthStateChanged`. Once authenticated, it reads `users/{uid}` in Firestore to resolve the user's role and `dealerStatus`. `AppNavigator` immediately routes the user to `CustomerTabs`, `DealerTabs`, or `PendingApprovalScreen`.
+2. **Catalog Fetching**: `CatalogScreen` reads the `products` collection from Firestore. Category filtering and search query indexing occur reactively via `useMemo`.
+3. **Cart & Checkout**:
+   - `CartContext` maintains local state in memory.
+   - On checkout, the app calls `POST /payment/create-order` on the Express backend. The server recalculates pricing from source documents, persists a server-side record in `payment_orders`, and returns a Razorpay Order ID.
+   - The app opens a WebView modal loading Razorpay checkout.
+   - When the user completes payment, Razorpay returns `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature`.
+   - The app forwards these credentials to `POST /payment/verify`. Once verified, the server creates the order in Firestore via Admin SDK and returns the order reference.
+   - If the user cancels or dismisses the modal, no verification is called, no order is created, and an explicit cancellation alert is displayed.
 
 ### Files that matter
-- `mobile/App.js`: Root entry wrapping providers (`SafeAreaProvider`, `AuthProvider`, `CartProvider`, `StatusBar`, `AppNavigator`).
-- `mobile/src/navigation/AppNavigator.js`: Role-based tab and stack navigation structure.
-- `mobile/src/hooks/useCart.js`: Lightweight React Context for cart management.
-- `mobile/src/hooks/useAuth.js`: Context providing current user and Firestore profile state.
-- `mobile/src/screens/customer/`: Customer-facing screens (`CatalogScreen`, `ProductDetailScreen`, `CartScreen`, `CheckoutScreen`, `OrdersScreen`, `ServiceBookingScreen`, `ProfileScreen`).
-- `mobile/src/screens/dealer/`: B2B wholesale dealer screens (`DealerCatalogScreen`, `DealerOrdersScreen`).
-- `mobile/src/screens/shared/PendingApprovalScreen.js`: Screen informing pending dealers of review status.
-- `mobile/src/services/`: Direct Firestore client services (`productService`, `orderService`, `serviceBookingService`, `authService`).
+- `mobile/src/navigation/AppNavigator.js`: Role-based routing and navigation hierarchy.
+- `mobile/src/hooks/useTheme.js`: Dynamic light/dark theme provider responding to system preferences and manual overrides.
+- `mobile/src/screens/customer/ProductDetailScreen.js`: Product view with native pinch/double-tap zoom and animated feedback.
+- `mobile/src/screens/customer/CheckoutScreen.js`: Address validation, 45s wake-up timeout handling, and Razorpay WebView lifecycle.
+- `mobile/src/screens/dealer/DealerCatalogScreen.js`: B2B wholesale ordering portal with minimum order quantities.
+- `mobile/src/services/notificationHelper.js`: Non-blocking push notification registration updating `users/{uid}.fcmToken`.
 
 ### Review Questions & Answers
-**Q1: Why did you choose React Context over Redux or Zustand for the cart?**  
-*Answer:* The cart state only requires storing a simple array of selected items, quantities, and calculating the sum total. React Context (`useCart`) provides this with zero additional dependencies, clean readable code, and no boilerplate actions or reducers.
+**Q1: How did you implement pinch and double-tap zoom without breaking Expo preview APK builds?**  
+*Answer:* I used React Native's built-in `ScrollView` with `maximumZoomScale={4}`, `minimumZoomScale={1}`, and `centerContent={true}`, paired with a double-tap gesture handler that calls `scrollResponderZoomTo`. This avoids third-party native libraries like `react-native-gesture-handler` reanimated native modules that frequently fail to link in standalone Expo preview APKs.
 
-**Q2: How does the app prevent unapproved dealers from seeing wholesale prices?**  
-*Answer:* There is a two-layer defense:
-1. **UI Layer**: `AppNavigator` checks `profile.role === "Dealer" && profile.dealerStatus === "approved"`. If `dealerStatus` is `"pending"`, the user is locked to `PendingApprovalScreen`.
-2. **Database Layer (Firestore Rules)**: Even if someone modified the app code, Firestore security rules strictly reject any `wholesale` collection read unless `request.auth` has an approved dealer or admin role in Firestore.
+**Q2: What happens if a customer attempts to place an order while the Render backend server is cold-starting?**  
+*Answer:* Render's free tier spins down idle instances. In `CheckoutScreen.js`, I added an explicit `AbortController` with a 45-second timeout and an informative status banner ("Connecting to server (waking up cloud instance if idle)..."). If the request times out, it aborts cleanly and advises the user to retry in a few moments without corrupting the cart state.
 
-**Q3: How is currency formatting and date formatting handled?**  
-*Answer:* Centralized in `mobile/src/utils/formatPrice.js` using `toLocaleString('en-IN')` to display standard Indian Rupee notation (`Rs. 14,999`) and readable date strings (`23 Oct 2026, 01:15 pm`).
+**Q3: How do you prevent clients from tampering with product prices during checkout?**  
+*Answer:* The client never sends item prices to the server. The client only sends `productId` and `qty`. The backend looks up each product in Firestore, fetches the actual price, calculates the grand total, and creates the order session server-side.
 
 ---
 
-## Module: Admin Web
+## 2. Module: Server (Node.js & Express Backend)
 
-_To be written after Phase 5._
+### What I built
+The backend server (`server/index.js`) serves as the trusted authority for payments, dealer wholesale transactions, address lookups, catalog rotation, and multi-channel notifications.
+- **Security & Production Guards**: In production (`NODE_ENV=production`), the server verifies that Razorpay keys and Firebase credentials are fully configured and not placeholders; if missing, it refuses to start.
+- **Rate Limiting & CORS**: Implements `express-rate-limit` on `/payment/*`, `/orders/*`, `/address/search`, and `/notifications/send`. CORS is strictly restricted to the Vercel admin domain and mobile clients via `ALLOWED_ORIGINS`.
+- **Payment Lifecycle**: Provides `POST /payment/create-order` and `POST /payment/verify`. Recomputes order totals server-side, stores session state in `payment_orders`, verifies HMAC SHA256 signatures, enforces idempotency, and performs atomic inventory decrements inside Firestore transactions.
+- **Dealer Bulk Ordering**: Implements `POST /orders/bulk`, verifying that the requesting user possesses `role === "Dealer"` and `dealerStatus === "approved"`, enforces wholesale minimum order quantities, and creates B2B orders.
+- **Address Geocoding Proxy**: Implements `GET /address/search`, proxying queries to OpenStreetMap Nominatim with a compliant `User-Agent` header to prevent CORS issues on web and mobile.
+- **Social Automation Rotation**: Implements `GET /automation/next-product`, atomically cycling through the catalog in Firestore under `automation/state` to provide daily marketing automation inputs.
 
----
+### Data flow: Payment Verification & Idempotency
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Mobile as Mobile App (Customer)
+    participant Server as Express Server
+    participant DB as Firestore (Admin SDK)
+    participant RZP as Razorpay Gateway
 
-## Module: Server
-
-_To be written after Phase 3._
-
----
-
-## Module: Automation (n8n)
-
-_To be written after Phase 6._
-
----
-
-## Firestore Rules
-
-### What it does
-Firestore security rules run directly on Google Cloud servers before any database read or write is permitted. Even if someone intercepts my app or uses the Firebase SDK directly with my API key, they cannot read or write data they do not own.
-
-### How data flows
-1. When a client requests `products/{id}`, Firestore checks the `allow read: if true;` rule and immediately returns the public product.
-2. When a client requests `wholesale/{id}`, Firestore executes the helper functions `isSignedIn()` and `getUser()`. It looks up `users/$(request.auth.uid)` to verify that `role == "Dealer"` AND `dealerStatus == "approved"` (or `role == "Admin"`). If a regular Customer tries to fetch it, Firestore rejects the request with `PERMISSION_DENIED`.
-3. When a user creates an order in `orders/{orderId}`, the rule requires `request.resource.data.userId == request.auth.uid`. A customer cannot spoof an order for someone else.
-4. Only an Admin can update order or service statuses.
+    Mobile->>Server: POST /payment/create-order { items: [{productId, qty}] }
+    Server->>DB: Fetch products/{productId} prices
+    Server->>DB: Store session in payment_orders/{orderId}
+    Server->>RZP: orders.create({ amount, currency: "INR" })
+    Server-->>Mobile: Return { orderId, amount, totalRupees }
+    
+    Mobile->>RZP: Customer completes payment in WebView
+    RZP-->>Mobile: Return { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+    
+    Mobile->>Server: POST /payment/verify (Bearer Token)
+    Server->>DB: Load payment_orders/{razorpay_order_id}
+    Note over Server: Verify UID matches token UID
+    Note over Server: Compute HMAC SHA256 signature
+    
+    alt Signature Invalid or Missing
+        Server-->>Mobile: 400 Bad Request (No order created)
+    else Signature Valid
+        Server->>DB: Check if paymentId already processed (Idempotency)
+        alt Duplicate Payment ID
+            Server-->>Mobile: 200 OK { isDuplicate: true, orderId }
+        else First-Time Verification
+            Server->>DB: runTransaction() [Verify & Decrement Stock]
+            Server->>DB: orders/{orderId}.set({ type: "retail", status: "confirmed" })
+            Server-->>Mobile: 200 OK { success: true, orderId }
+            Note over Server: Non-blocking trigger: FCM, Brevo Email, TextBee SMS
+        end
+    end
+```
 
 ### Files that matter
-- `firestore.rules`: Contains the entire rule definitions and helper functions.
-- `docs/DECISIONS.md`: The documented rationale behind each rule choice.
-
-### Why this design was chosen
-- **Wholesale in a separate collection (`wholesale/{productId}`) rather than a field in `products/{productId}`**: Firestore rules are document-level, not field-level for reads. You cannot hide a single field of a document from certain users while returning the rest of the document. Having a separate `wholesale` collection allows clean, atomic read access control.
-- **Server bypass**: The backend Express service uses the Firebase Admin SDK (`serviceAccountKey.json`), which bypasses Firestore security rules entirely. This means our seed scripts and payment verification webhooks can write data without needing user session tokens.
+- `server/index.js`: Primary server entry point, rate limiting, CORS, payment verification, and route definitions.
+- `server/firebaseAdmin.js`: Firebase Admin SDK initialization supporting multiple credential formats (Base64 env, file path, secret files).
+- `server/services/notificationService.js`: Multi-channel notification dispatch (Brevo REST API v3, TextBee Android Gateway, FCM).
+- `server/scripts/testServerSecurityAndIdempotency.js`: Automated test suite for authentication, idempotency, transaction rollbacks, and failed payment isolation.
+- `server/scripts/verifyPhase3.js`: Integration test suite validating end-to-end payment verification and dealer bulk flows.
 
 ### Review Questions & Answers
-**Q1: Why didn't you just keep wholesalePrice inside the product document?**  
-*Answer:* In Firestore, read security rules operate on the entire document. If `wholesalePrice` were inside `products/{id}`, every public user fetching the product catalog would receive the wholesale price in the JSON response unless I used backend proxy endpoints. Splitting wholesale into `wholesale/{productId}` lets public users read `products` while strictly guarding `wholesale` with Firestore rules.
+**Q1: What happens if a network glitch causes the mobile app to call `/payment/verify` twice for the same payment?**  
+*Answer:* The verify endpoint is strictly idempotent. Before processing, it queries `orders` where `paymentId == razorpay_payment_id`. If an order already exists, it immediately returns `200 OK` with `{ isDuplicate: true, orderId: existingOrder.id }` and skips the inventory decrement transaction, ensuring stock is never double-deducted.
 
-**Q2: What prevents a user from making themselves an Admin or approving their own Dealer status?**  
-*Answer:* The rule on `users/{uid}` explicitly forbids modifying `role` or `dealerStatus` during user updates:  
-`!("role" in request.resource.data.diff(resource.data).affectedKeys())`. Only a user with `getUser().role == "Admin"` is granted write access to those keys.
+**Q2: How does the server handle inventory depletion during concurrent checkouts?**  
+*Answer:* Stock decrement is wrapped inside a Firestore transaction (`db.runTransaction`). The server reads the current stock of all items in the order, verifies `currentStock >= requestedQty`, and decrements atomically. If any item is out of stock, the transaction aborts, throws a 500 error, and writes nothing to the database.
 
-**Q3: Does the seed script fail if Firestore rules are in Production mode?**  
-*Answer:* No. The seed script uses `firebase-admin` with a service account key, which operates as an administrative superuser on Google Cloud and bypasses client security rules.
+**Q3: What happens if Brevo email or TextBee SMS fails during checkout? Does the order fail?**  
+*Answer:* No. Multi-channel notifications are dispatched inside a separate try-catch block using unawaited `.catch()` promises after the database transaction commits. Notification failures are logged as warnings and never interrupt or fail the customer's checkout response.
 
 ---
 
-## Auth and Roles
+## 3. Module: Admin Web (React 18 & Vite)
 
-### What it does
-Manages authentication for three distinct roles: `Customer`, `Dealer`, and `Admin`. Each user's identity is authenticated by Firebase Auth (email & password or OAuth), and their application profile and authorization level are tracked in Firestore at `users/{uid}`.
-
-### How data flows
-1. On user registration, Firebase Auth issues a unique `uid`.
-2. A corresponding document `users/{uid}` is created containing `{ role, dealerStatus, name, phone, address }`.
-3. If the user registers as a `Customer`, `dealerStatus` is `null`.
-4. If the user registers as a `Dealer`, `dealerStatus` defaults to `"pending"`.
-5. When the user logs in, the app reads `users/{uid}`. If `role === "Dealer"` and `dealerStatus === "pending"`, the app routes them to the `PendingApprovalScreen`. Once approved by an Admin, their status becomes `"approved"` and they can access the wholesale pricing screens.
+### What I built
+I created an administrative web dashboard for Califnco executives to monitor orders, manage dealer applications, track field service requests, and review inventory.
+- **Executive Authentication & Role Gate**: Verifies that the signed-in user document contains `role === "Admin"`. Any authenticated non-admin user is immediately signed out and shown an "Access Denied" barrier.
+- **Fulfillment Operations**: Real-time order monitor with one-click filtering between `ALL`, `RETAIL`, and `BULK` orders, full search across order IDs, customer UIDs, and line items, and instant order status transitions (`confirmed` -> `shipped` -> `delivered`).
+- **Dealer Verification Pipeline**: Lists dealer onboarding applications with contact details, business credentials, and dedicated `Approve` and `Reject` buttons that update `users/{uid}.dealerStatus`.
+- **Service Desk**: Live feed of customer technician requests with status controls (`pending`, `in-progress`, `resolved`) and an internal technician notes modal.
+- **Clean Production Bundle**: Built with Vite 5. No credentials, tokens, or prefilled test accounts exist in the client code bundle.
 
 ### Files that matter
-- `server/scripts/seed.js`: Contains seed accounts and automated user provisioning.
-- `mobile/src/config/firebase.js`: Client-side Firebase instance for the mobile app.
-- `admin-web/src/config/firebase.js`: Client-side Firebase instance for the admin panel.
+- `admin-web/src/App.jsx`: State management, real-time Firestore listeners, and view routing.
+- `admin-web/src/views/LoginView.jsx`: Admin login view with explicit Firestore role verification.
+- `admin-web/src/views/OrdersView.jsx`: Retail vs. Bulk order filter and status update dispatch.
+- `admin-web/src/views/DealersView.jsx`: Dealer application review and status toggles.
+- `admin-web/src/views/ServicesView.jsx`: Service ticket management and technician notes.
 
 ### Review Questions & Answers
-**Q1: Where are the user roles stored?**  
-*Answer:* Primarily in Firestore at `users/{uid}` for simple real-time querying by both the client and admin panel, and mirrored in Firebase Auth Custom Claims during admin actions to provide instant rule evaluation without extra document reads.
+**Q1: How is the admin web app protected against unauthorized access?**  
+*Answer:* Protection is enforced at both the UI and database levels:
+1. `LoginView.jsx` and `App.jsx` fetch `users/{uid}` upon login; if `role !== "Admin"`, the app signs out the user immediately.
+2. Firestore security rules enforce `isAdmin()` on all write operations to products, wholesale, orders, and user roles. Even if a user bypassed the frontend, direct Firestore REST or client SDK calls are rejected by Google Cloud servers.
 
-**Q2: Where are the credentials for the test accounts located?**  
-*Answer:*
-All test credentials (Admin, Approved Dealer, Pending Dealer, Customer) along with test payment details are centralized in [docs/SUBMISSION.md](file:///c:/Users/MAYUR/OneDrive/Desktop/Assignment/docs/SUBMISSION.md) to keep architectural explanations clean and secure.
+**Q2: How are order status updates propagated to customers?**  
+*Answer:* When an administrator changes an order's status from the dashboard, `App.jsx` updates `orders/{orderId}.status`. The server-side status route triggers multi-channel notifications (email, SMS, and FCM push) to the customer associated with that order.
 
 ---
 
-## Dealer Approval Flow & Wholesale Pricing
+## 4. Module: Automation Engine (Social Media Marketing)
 
-### What it does
-Provides a dual-tier pricing and onboarding flow:
-1. Public customers see standard retail MSRP prices.
-2. Dealers apply for an account with business credentials. Their application enters a `"pending"` state.
-3. While pending, dealers cannot access wholesale pricing. They see an informative `PendingApprovalScreen`.
-4. Once an administrator clicks "Approve" in the Admin Web Portal, the user's `dealerStatus` in Firestore `users/{uid}` becomes `"approved"`.
-5. The dealer immediately gains access to the B2B Wholesale Catalog with wholesale discount pricing and minimum order quantities (`minQty`).
+### What I built
+The automation system publishes one featured product per day to Instagram with an AI-synthesized product image, a strictly factual caption, and an optional WhatsApp Status broadcast via WAHA.
+- **Catalog Rotation**: Calls `GET /automation/next-product` with 60-second timeouts and 3 retries, cycling through products sequentially via Firestore state (`automation/state`).
+- **Factual Copywriting via Groq**: Queries Groq API using `llama-3.3-70b-versatile` (with dynamic runtime fallback selection from Groq's active model list). Strictly forbids invented discounts, "festive offers", percentage claims, installation promises, or medical claims. Strips all markdown (`**`, `#`, backticks), producing 2 to 4 clean lines, 1 call-to-action mentioning the Califnco app, and 5 to 8 hashtags under 2,000 characters.
+- **Studio Product Imagery**: Attempts Hugging Face `FLUX.1-schnell` router first when API keys are configured, falling back automatically to Pollinations FLUX. Generates high-resolution (1080x1080) clean studio product photography on a neutral background. Validates that output bytes are a valid JPEG or PNG larger than 10 KB. Never substitutes catalog photos.
+- **Cloudinary CDN Upload**: Uploads using signed credentials to folder `califnco/daily-posts`, public ID `<productId>-<YYYYMMDD>`, overwrite true. Derives an Instagram-optimized 1:1 square URL (`/upload/f_jpg,c_fill,ar_1:1,w_1080,q_auto/`) and confirms via a `HEAD` request that it returns HTTP 200 and `image/jpeg`.
+- **Meta Instagram Publishing**: When `META_ACCESS_TOKEN` and `IG_USER_ID` are configured, creates a container via `POST /{IG_USER_ID}/media`, polls status until `FINISHED` (60s timeout), publishes via `POST /{IG_USER_ID}/media_publish`, and prints the permalink. If credentials are missing, prints `NOT POSTED: Meta credentials missing (META_ACCESS_TOKEN, IG_USER_ID)` and exits with code 2.
+- **WAHA Broadcast**: If `WAHA_URL` is set, dispatches a status update via `POST /api/sendImage` without blocking the pipeline.
+- **GitHub Actions Scheduler**: Configured under `.github/workflows/daily-post.yml` to trigger daily at 10:00 AM IST (`cron: '30 4 * * *'`) and on `workflow_dispatch`.
 
-### How data flows
-1. Public catalog is read from `products/{productId}` (open read to all users).
-2. Wholesale pricing is stored in a separate collection `wholesale/{productId}` with rule:
-   ```
-   allow read: if isApprovedDealer() || isAdmin();
-   ```
-3. When placing bulk orders, the dealer submits their order via `POST /orders/bulk` on the backend server.
-4. The server:
-   - Verifies the user is an approved dealer in `users/{userId}`.
-   - For each item, verifies that requested quantity is greater than or equal to `minQty`.
-   - Recomputes the total cost strictly using the prices in `wholesale/{productId}`.
-   - Creates the order with `type: "bulk"` in `orders` collection via Admin SDK.
+### Files that matter
+- `automation/runDailyPost.js`: Complete standalone runner executing all 5 steps with robust validation.
+- `.github/workflows/daily-post.yml`: GitHub Actions serverless cron schedule and secrets mapping.
+- `automation/workflow.json`: Exportable n8n workflow representing the visual alternative architecture.
+- `automation/README.md`: Setup instructions, GitHub Secrets documentation, and operational reference.
 
 ### Review Questions & Answers
-**Q1: How do you prevent a regular customer from seeing wholesale prices?**  
-*Answer:* Wholesale prices are stored in a dedicated `wholesale` collection in Firestore. Security rules enforce `isApprovedDealer() || isAdmin()`, which checks that `request.auth` has a corresponding `users/{uid}` record with `role == "Dealer"` and `dealerStatus == "approved"`. A customer's query to `wholesale` is rejected by Firestore Cloud at the rule level.
+**Q1: Why did you switch from a local n8n instance to GitHub Actions for the scheduler?**  
+*Answer:* Running a local n8n instance requires an always-on physical computer or a paid cloud VM running 24/7. GitHub Actions runs serverlessly on GitHub's cloud runners at 10:00 AM IST daily for under 1 minute, consuming zero local resources and zero hosting cost within GitHub's free monthly allowance.
 
-**Q2: Can a pending dealer place a bulk order?**  
-*Answer:* No. The client UI restricts pending dealers to `PendingApprovalScreen`. Even if an attacker bypasses the mobile UI, the backend endpoint `POST /orders/bulk` independently queries Firestore for the dealer's profile and returns HTTP 403 if `dealerStatus !== "approved"`.
+**Q2: What happens if Groq deprecates or changes their model catalog?**  
+*Answer:* In `automation/runDailyPost.js`, the script queries `GET https://api.groq.com/openai/v1/models` at runtime before issuing completions. It tests for `llama-3.3-70b-versatile` and selects an active verified fallback (e.g., `openai/gpt-oss-120b`) if unavailable, logging the exact model used.
+
+**Q3: Why is Cloudinary necessary in the Instagram posting pipeline?**  
+*Answer:* Meta's Instagram Graph API does not accept direct image uploads or raw binary payloads. It strictly requires a public, SSL-secured HTTPS URL that Meta's servers can crawl. Cloudinary delivers the image with optimal dimensions (`1080x1080`), auto-compression (`q_auto`), and JPEG format formatting.
 
 ---
 
-## Payments (Razorpay Integration & Security)
+## 5. Module: Firestore Security Rules
 
-### What it does
-Implements a secure, end-to-end Razorpay test payment flow for retail orders:
-1. Client sends cart items to `POST /payment/create-order`.
-2. Server recomputes total from `products/` (never trusting client totals) and creates an official Razorpay order.
-3. Mobile app renders the Razorpay Standard Checkout in a dedicated `react-native-webview`.
-4. Upon successful payment, Razorpay returns `razorpay_order_id`, `razorpay_payment_id`, and `razorpay_signature`.
-5. Client sends these parameters to `POST /payment/verify`.
-6. Server calculates `crypto.createHmac("sha256", secret).update(order_id + "|" + payment_id).digest("hex")` and compares it using `crypto.timingSafeEqual`.
-7. Once verified, the server creates the order in Firestore with `status: "confirmed"`, `type: "retail"`, and decrements inventory.
+### What I built
+A centralized, battle-tested `firestore.rules` ruleset that enforces role-based access control and client isolation at the database engine level.
+- **Client Order Creation Denial (`match /orders/{orderId} { allow create: if false; }`)**: Clients cannot create order documents directly. All orders must be validated and created server-side via the Express backend and Admin SDK after signature verification and stock reservation.
+- **Wholesale Isolation (`match /wholesale/{id}` & `match /payment_orders/{id}`)**: Wholesale pricing documents can only be read by approved dealers or admins. `payment_orders` is strictly unreadable and unwritable by any client.
+- **User Role Immutability**: Users can update their own non-sensitive profile fields (name, phone, address, FCM push token), but rules strictly reject any attempt to modify `role` or `dealerStatus` (`!("role" in request.resource.data.diff(resource.data).affectedKeys())`).
+- **Public vs. Protected Collections**: `products` is publicly readable; `services` can be created by authenticated users with initial status `pending`; `automation` state is inaccessible to clients.
 
 ### Review Questions & Answers
-**Q1: Why can't the client write directly to the `orders` collection in Firestore?**  
-*Answer:* In earlier iterations, client direct creates were allowed, which meant a compromised client could write unpaid orders or tamper with totals. Under Phase 3 rules, `match /orders/{orderId} { allow create: if false; }`. All orders must be created by the backend Express server using the Firebase Admin SDK after cryptographic payment signature verification.
+**Q1: Why did you forbid clients from creating orders directly in Firestore (`allow create: if false`)?**  
+*Answer:* In client-side order creation, a malicious user could inspect network traffic, forge order amounts, fabricate fake payment IDs, bypass inventory counts, or inject custom items. By forbidding client-side order creation, all orders are guaranteed to pass through server-side price recomputation, HMAC SHA256 signature verification, and atomic inventory transactions.
 
-**Q2: What is the timing attack protection in payment verification?**  
-*Answer:* Instead of using standard string equality (`computedSignature === receivedSignature`), we use `crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(received))`. This prevents side-channel timing attacks that could deduce valid signatures character-by-character.
-
----
-
-## Executive Admin Web Portal (React + Vite + Vercel)
-
-### What it does
-Provides executive administrators with an overview and management tools for the business:
-- **Command Center Dashboard**: Live revenue analytics, order counts, pending dealer counts, and recent transactions.
-- **Order Operations**: Filter by Retail vs Bulk wholesale, search by order ID or customer, and update fulfillment statuses (`confirmed` -> `dispatched` -> `delivered`).
-- **Dealer Pipeline**: One-click review, approval, or rejection of B2B dealer registrations.
-- **Service Desk**: View customer maintenance requests, assign technicians, and record resolution notes.
-- **Warehouse Inventory**: Real-time stock levels with one-click adjustments (`+1`, `-1`, `+10`), low-stock indicators, and an "Add New Product" modal.
-
-### Architecture & Deployment
-- Built with **React 18** and **Vite 5**.
-- Uses real-time Firestore `onSnapshot` listeners so multiple administrators see instant updates without manual page refreshes.
-- Configured with `vercel.json` rewrite rules (`{ "source": "/(.*)", "destination": "/index.html" }`) to support client-side single page app (SPA) routing on Vercel without 404 errors.
-
----
-
-## Automated Social Media Marketing (n8n + AI + Instagram)
-
-### What it does
-Runs an automated scheduled workflow every morning at 10:00 AM IST to post the daily featured product to Instagram and WhatsApp:
-1. **Catalog Rotation**: Calls `GET /automation/next-product`, which reads `automation/state` in Firestore, advances to the next catalog item, and returns clean product metadata.
-2. **AI Caption**: Generates marketing copy with TDS benefits, festive pricing, and hashtags via Groq LLaMA 3.1.
-3. **AI Image**: Generates luxury studio photography via Hugging Face FLUX.1-schnell (with graceful fallback to high-res catalog photos).
-4. **CDN Hosting**: Uploads the media to Cloudinary to provide a public HTTPS URL required by Meta's crawler.
-5. **Meta Graph API**: Publishes the post directly to Instagram Business account via container creation and media publish.
-6. **WhatsApp Status**: Broadcasts the product update to `status@broadcast` via headless WAHA Docker container.
-
-### Review Questions & Answers
-**Q1: Why is an n8n workflow export provided instead of just a script?**  
-*Answer:* The assignment explicitly specifies an n8n workflow (`automation/workflow.json`). n8n provides visual execution monitoring, individual node state inspection, automatic retry logic, and zero-code credential management.
-
-**Q2: What happens if Hugging Face or Groq has an API rate limit or outage?**  
-*Answer:* The workflow includes a fallback node (`Format Caption & Fallbacks`). If the generative image API fails, it automatically falls back to the high-resolution product photography seeded in Firestore. If the LLM caption fails, it falls back to a curated high-converting promotional template.
-
----
-
-## Address Lookup & Nominatim Integration
-
-### What it does
-Provides fast locality and pincode autofill for Indian delivery addresses without incurring Google Maps API fees.
-- Utilizes OpenStreetMap's Nominatim search API.
-- Implements a proxy endpoint on the backend: `GET /address/search?q=...`
-- Sends a compliant `User-Agent` header (`Califnco-WaterPurifier-App/1.0`).
-- Triggered strictly on explicit user button tap ("Lookup Location") rather than continuous autocomplete keystrokes, adhering strictly to OSM Nominatim Acceptable Use Policy.
-
----
-
-## Multi-Channel Notifications (Email, SMS, FCM)
-
-### What it does
-Provides unified multi-channel transactional notifications across Email, SMS, and Native Push:
-1. **Order Confirmation**: Dispatched automatically when `/payment/verify` completes payment verification and records the order.
-2. **Order Status Updates**: Dispatched via `PATCH /orders/:id/status` (e.g. `shipped`, `out_for_delivery`, `delivered`).
-3. **Service Request Updates**: Dispatched via `PATCH /services/:id/status` when technicians are assigned or tickets updated.
-
-### Delivery Channels & Zero-Cost Architecture
-- **Transactional Email**: Uses **Brevo REST API v3** (`https://api.brevo.com/v3/smtp/email`), providing 300 free emails per day without credit card requirements or mandatory custom domain DNS lock-in.
-- **Transactional SMS**: Integrated with **TextBee Free Android Gateway** (`https://textbee.dev`), routing through an Android phone's carrier SIM card. This bypasses India's mandatory ₹5,900 TRAI DLT registration and template approval fees while delivering real SMS to customer phones.
-- **Native Device Push (FCM)**: Native push tokens are automatically registered upon user login via `expo-notifications` and saved to `users/{uid}.fcmToken`. The backend dispatches notifications directly via Firebase Admin Messaging SDK (`admin.messaging().send`).
-
----
-
-## Mobile Dark Mode & Pinch-to-Zoom
-
-### What it does
-1. **Persistent Dark Mode**:
-   - Implemented via `useTheme` hook (`mobile/src/hooks/useTheme.js`) with React Context and `AsyncStorage` (`@califnco_theme_mode`).
-   - Seamlessly switches between a crisp daylight theme (`#f5f7fa` / `#0a2540`) and a luxury obsidian navy dark theme (`#070d19` / `#0f172a` / `#00b4d8`).
-   - Dynamic `StatusBar` style adaptation (`light` vs `dark`).
-   - Interactive toggle switch integrated in `ProfileScreen.js` with instant reactive re-rendering across tab bars, headers, and cards.
-2. **Pinch-to-Zoom Product Image Viewer**:
-   - Embedded in `ProductDetailScreen.js` with an interactive "Tap to Zoom" indicator badge.
-   - Opens a fullscreen modal with dark blurred backdrop.
-   - Built with native `ScrollView` utilizing `maximumZoomScale={4}`, `minimumZoomScale={1}`, `centerContent={true}`, and smooth pinch gesture handling.
-
----
-
-## EAS Development APK Build (Without Android Studio)
-
-### How it works
-Expo Application Services (EAS) builds the standalone Android `.apk` package entirely in the cloud, eliminating the need to install Android Studio, Java JDK, or the Android SDK/NDK on your local computer.
-
-1. **Prerequisites**:
-   ```bash
-   npm install -g eas-cli
-   eas login
-   ```
-2. **Configure project**:
-   Ensure `mobile/app.json` contains `"package": "com.califnco.app"` and `mobile/google-services.json` is present.
-3. **Run Cloud Build**:
-   ```bash
-   cd mobile
-   eas build --platform android --profile preview
-   ```
-   *Note: Using `--profile preview` produces a direct installable `.apk` file (rather than an `.aab` Google Play store bundle) that can be installed on any physical Android phone or emulator.*
-
-
+**Q2: How do you verify that your security rules actually work in practice?**  
+*Answer:* I wrote a dedicated client-side security test suite (`server/scripts/testRulesSecurity.js`) that signs in as Guests, Customers, Pending Dealers, and Approved Dealers, attempting both authorized and unauthorized operations. The suite asserts that unauthorized operations throw `permission-denied` errors, achieving a 27/27 pass rate.
