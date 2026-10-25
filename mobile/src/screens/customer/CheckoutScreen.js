@@ -280,7 +280,14 @@ export default function CheckoutScreen({ navigation }) {
 
             <button class="btn" onclick="openRazorpay()">💳 Pay with Razorpay Gateway</button>
             <button class="btn btn-cancel" onclick="cancelCheckout()">Cancel and Return</button>
-            <div class="hint">Razorpay Sandbox: Enter test card or UPI details to complete payment.</div>
+            
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-top: 14px; text-align: left; font-size: 11px; color: #475569; line-height: 16px;">
+              <strong style="color: #0f172a;">🧪 Razorpay Sandbox Instructions:</strong><br/>
+              • <strong>Test Card (Recommended):</strong> <code>4111 1111 1111 1111</code><br/>
+              • <strong>Exp:</strong> <code>12/30</code> | <strong>CVV:</strong> <code>123</code> | <strong>OTP:</strong> <code>123456</code><br/>
+              • <strong>Test UPI ID:</strong> <code>success@razorpay</code><br/>
+              <span style="color: #dc2626; font-size: 10px;">⚠️ Notice: Real UPI apps (Google Pay, PhonePe) reject sandbox QR codes because banking networks only process live merchant VPAs.</span>
+            </div>
           </div>
 
           <script>
@@ -386,15 +393,20 @@ export default function CheckoutScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Payment Security Notice */}
+      {/* Payment Security & Sandbox Notice */}
       <View style={s.section}>
         <Text style={s.sectionTitle}>Payment Options</Text>
         <View style={s.payBadge}>
-          <Text style={s.payBadgeText}>🔒 Razorpay Gateway (Test & Live Mode)</Text>
+          <Text style={s.payBadgeText}>🔒 Razorpay Gateway (Sandbox Test Mode)</Text>
         </View>
-        <Text style={s.payNote}>
-          Order totals are verified server-side against the product catalog. Signatures are verified via HMAC SHA256 before order confirmation.
-        </Text>
+        <View style={s.testInfoBox}>
+          <Text style={s.testInfoTitle}>🧪 Sandbox Testing Credentials</Text>
+          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test Card:</Text> 4111 1111 1111 1111 (Exp: 12/30, CVV: 123)</Text>
+          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test UPI ID:</Text> success@razorpay</Text>
+          <Text style={s.testInfoWarning}>
+            Notice: Real UPI apps (GPay/PhonePe) cannot process test sandbox payments because banks reject test merchant VPAs. Use the test card or test UPI ID above.
+          </Text>
+        </View>
       </View>
 
       {statusMsg ? (
@@ -414,11 +426,23 @@ export default function CheckoutScreen({ navigation }) {
       </View>
 
       {/* Razorpay WebView Modal */}
-      <Modal visible={showWebView} animationType="slide" onRequestClose={() => setShowWebView(false)}>
+      <Modal
+        visible={showWebView}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowWebView(false);
+          setCheckoutData(null);
+        }}
+      >
         <View style={{ flex: 1, backgroundColor: "#0a2540" }}>
           <View style={s.modalHeader}>
             <Text style={s.modalHeaderTitle}>Razorpay Secure Payment</Text>
-            <TouchableOpacity onPress={() => setShowWebView(false)}>
+            <TouchableOpacity
+              onPress={() => {
+                setShowWebView(false);
+                setCheckoutData(null);
+              }}
+            >
               <Text style={s.modalClose}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -491,6 +515,10 @@ const s = StyleSheet.create({
   payBadge: { backgroundColor: "#f0fdf4", borderRadius: 8, padding: 12, borderWidth: 1, borderColor: "#bbf7d0", marginBottom: 10 },
   payBadgeText: { fontSize: 14, fontWeight: "700", color: colors.success },
   payNote: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+  testInfoBox: { backgroundColor: "#f8fafc", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#e2e8f0", marginTop: 4 },
+  testInfoTitle: { fontSize: 13, fontWeight: "800", color: "#0f172a", marginBottom: 6 },
+  testInfoText: { fontSize: 12, color: "#334155", marginBottom: 3 },
+  testInfoWarning: { fontSize: 11, color: "#dc2626", marginTop: 6, lineHeight: 15 },
   statusBanner: { marginHorizontal: 16, marginBottom: 8, padding: 12, backgroundColor: "#eff6ff", borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 10 },
   statusBannerText: { fontSize: 13, color: colors.primary, flex: 1 },
   footer: { padding: 16, paddingBottom: 32 },
