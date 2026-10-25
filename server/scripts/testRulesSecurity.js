@@ -86,6 +86,17 @@ async function runRulesTests() {
     });
   }, "Guest CANNOT create an order");
 
+  await expectDenied(async () => {
+    await getDocs(collection(db, "payment_orders"));
+  }, "Guest CANNOT read payment_orders collection");
+
+  await expectDenied(async () => {
+    await addDoc(collection(db, "payment_orders"), {
+      razorpayOrderId: "order_fake",
+      amount: 100
+    });
+  }, "Guest CANNOT write to payment_orders collection");
+
   // --- SECTION 2: Authenticated Customer ---
   console.log("\n2. Testing Customer Role Enforcement (customer@test.com)...");
   const custCred = await signInWithEmailAndPassword(auth, "customer@test.com", "Customer@123456");
@@ -119,6 +130,22 @@ async function runRulesTests() {
       phone: "+919876543210"
     });
   }, "Customer CAN update their own non-privileged profile fields (phone)");
+
+  await expectDenied(async () => {
+    await getDocs(collection(db, "payment_orders"));
+  }, "Customer CANNOT read payment_orders collection");
+
+  await expectDenied(async () => {
+    await getDoc(doc(db, "payment_orders", "order_test_123"));
+  }, "Customer CANNOT read single payment_orders document");
+
+  await expectDenied(async () => {
+    await addDoc(collection(db, "payment_orders"), {
+      razorpayOrderId: "order_fake_cust",
+      uid: customerUid,
+      amount: 100
+    });
+  }, "Customer CANNOT write to payment_orders collection");
 
   // Order security enforcement for Customer
   console.log("\n3. Testing Order Creation Constraints (Customer)...");
@@ -246,6 +273,17 @@ async function runRulesTests() {
       updatedAt: new Date()
     });
   }, "Approved Dealer CANNOT create orders directly from client (must use POST /orders/bulk)");
+
+  await expectDenied(async () => {
+    await getDocs(collection(db, "payment_orders"));
+  }, "Approved Dealer CANNOT read payment_orders collection");
+
+  await expectDenied(async () => {
+    await addDoc(collection(db, "payment_orders"), {
+      razorpayOrderId: "order_fake_dealer",
+      amount: 49000
+    });
+  }, "Approved Dealer CANNOT write to payment_orders collection");
 
   await signOut(auth);
 

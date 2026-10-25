@@ -85,5 +85,10 @@ service cloud.firestore {
     match /automation/{docId} {
       allow read, write: if false;
     }
+
+    // payment_orders — server-side session records, no client read or write allowed
+    match /payment_orders/{orderId} {
+      allow read, write: if false;
+    }
   }
 }

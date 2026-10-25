@@ -323,6 +323,32 @@ async function runSecurityAndIdempotencyTests() {
   const noOrderSnap = await db.collection("orders").where("paymentId", "==", excessivePayId).get();
   assert(noOrderSnap.empty, "No order was created for the aborted transaction");
 
+  // 8. Cancelled or Failed Payment creates NO Order
+  console.log("\n8. Testing Cancelled & Failed Payments create NO Order in Firestore...");
+  const failedPayId = `pay_failed_${Date.now()}`;
+  const badSigRes = await fetch(`${SERVER_URL}/payment/verify`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${customerToken}`
+    },
+    body: JSON.stringify({
+      razorpay_order_id: mockOrderId,
+      razorpay_payment_id: failedPayId,
+      razorpay_signature: "invalid_hmac_signature",
+      items: [{ productId: "prod_purifier_02", qty: 1 }],
+      address: { line1: "Test St", city: "Bengaluru", state: "KA", pincode: "560001" }
+    })
+  });
+  assert(badSigRes.status === 400, "Failed payment with invalid signature returns 400 Bad Request");
+
+  const failedOrderCheck = await db.collection("orders").where("paymentId", "==", failedPayId).get();
+  assert(failedOrderCheck.empty, "Failed payment created NO order document in Firestore");
+
+  const cancelledSessionId = `order_session_cancelled_${Date.now()}`;
+  const cancelledOrderCheck = await db.collection("orders").where("razorpayOrderId", "==", cancelledSessionId).get();
+  assert(cancelledOrderCheck.empty, "Cancelled payment session created NO order document in Firestore");
+
   console.log("\n=========================================================");
   console.log(`   SECURITY & IDEMPOTENCY RESULTS: ${passed} PASSED, ${failed} FAILED`);
   console.log("=========================================================");

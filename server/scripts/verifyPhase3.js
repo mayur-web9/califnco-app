@@ -129,7 +129,7 @@ async function runTests() {
     .update(`${orderId}|${paymentId}`)
     .digest("hex");
 
-  // A) Invalid signature test
+  // A) Invalid signature / failed payment test
   const invalidVerify = await postJson("/payment/verify", {
     razorpay_order_id: orderId,
     razorpay_payment_id: paymentId,
@@ -138,6 +138,14 @@ async function runTests() {
     address: { line1: "123 Main St", city: "Bengaluru", state: "KA", pincode: "560001" }
   }, custToken);
   assert(invalidVerify.status === 400, "Invalid signature rejected with 400 Bad Request");
+
+  const noOrderFailed = await db.collection("orders").where("paymentId", "==", paymentId).get();
+  assert(noOrderFailed.empty, "Failed payment created NO order in Firestore");
+
+  // A2) Cancelled checkout session (created order but payment was cancelled / never verified)
+  const cancelledOrderId = "order_cancelled_" + Date.now();
+  const noOrderCancelled = await db.collection("orders").where("razorpayOrderId", "==", cancelledOrderId).get();
+  assert(noOrderCancelled.empty, "Cancelled payment created NO order in Firestore");
 
   // B) Unknown razorpay_order_id test (returns 404)
   const unknownOrderId = "order_unknown_" + Date.now();
