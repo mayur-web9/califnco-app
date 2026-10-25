@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useCart } from "../../hooks/useCart";
+import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { formatPrice } from "../../utils/formatPrice";
 import { getProductImageSource } from "../../constants/productImages";
@@ -10,7 +11,20 @@ import colors from "../../constants/colors";
 
 export default function CartScreen({ navigation }) {
   const { items, removeItem, updateQty, clearCart, total, count } = useCart();
+  const { profile } = useAuth();
   const { theme, isDark } = useTheme();
+
+  function handleExploreProducts() {
+    const role = (profile?.role || "").toLowerCase().trim();
+    const nav = navigation.getParent() || navigation;
+    if (role === "dealer") {
+      nav.navigate("DealerCatalog");
+    } else if (role === "admin") {
+      nav.navigate("AdminProducts");
+    } else {
+      nav.navigate("Catalog");
+    }
+  }
 
   return (
     <View style={[s.container, { backgroundColor: theme.background }]}>
@@ -50,7 +64,7 @@ export default function CartScreen({ navigation }) {
 
           <TouchableOpacity
             style={s.browseBtn}
-            onPress={() => navigation.navigate("Catalog")}
+            onPress={handleExploreProducts}
             activeOpacity={0.85}
           >
             <MaterialIcons name="shopping-bag" size={18} color="#ffffff" style={{ marginRight: 8 }} />

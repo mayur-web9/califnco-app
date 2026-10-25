@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
-  View, Text, FlatList, TextInput, TouchableOpacity,
+  View, Text, FlatList, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, Image, Animated, Platform
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -60,125 +60,127 @@ export default function CatalogScreen({ navigation }) {
     );
   }
 
-  const renderHeader = () => (
-    <View style={s.headerContent}>
-      {/* 1. Top Bar Greeting (Screen 7) */}
-      <View style={[s.topBar, { backgroundColor: isDark ? theme.card : "#0a2540" }]}>
-        <View style={{ flex: 1 }}>
-          <View style={s.greetingRow}>
-            <Text style={s.greetingName}>
-              Hello, {profile?.name ? profile.name.split(" ")[0] : "Mayur"}
-            </Text>
-            <Text style={s.greetingCrown}>👑</Text>
+  const renderHeader = () => {
+    const nav = navigation.getParent() || navigation;
+    const role = (profile?.role || "").toLowerCase();
+
+    return (
+      <View style={s.headerContent}>
+        {/* 1. Top Bar Greeting (Screen 7) */}
+        <View style={[s.topBar, { backgroundColor: isDark ? theme.card : "#0a2540" }]}>
+          <View style={{ flex: 1 }}>
+            <View style={s.greetingRow}>
+              <Text style={s.greetingName}>
+                Hello, {profile?.name ? profile.name.split(" ")[0] : "Mayur"}
+              </Text>
+              <Text style={s.greetingCrown}>👑</Text>
+            </View>
+            <Text style={s.greetingSub}>Pure Water, Better Life</Text>
           </View>
-          <Text style={s.greetingSub}>Pure Water, Better Life</Text>
+
+          <View style={s.topBarActions}>
+            <TouchableOpacity
+              style={s.topBarIconBtn}
+              onPress={() => {
+                nav.navigate(role === "admin" ? "AdminOrders" : role === "dealer" ? "DealerOrders" : "Orders");
+              }}
+              activeOpacity={0.8}
+              accessibilityLabel="Notifications"
+            >
+              <MaterialIcons name="notifications-none" size={22} color="#ffffff" />
+              <View style={s.badgeDot} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.topBarIconBtn, s.logoutBtn]}
+              onPress={() => {
+                Alert.alert(
+                  "Sign Out",
+                  "Are you sure you want to sign out from your account?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Sign Out", style: "destructive", onPress: () => logout() }
+                  ]
+                );
+              }}
+              activeOpacity={0.8}
+              accessibilityLabel="Sign Out"
+            >
+              <MaterialIcons name="logout" size={18} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={s.topBarActions}>
+        {/* 2. Hero Gradient Banner: "Clean Water for a Healthier You" (Screen 7) */}
+        <View style={[s.heroBanner, { backgroundColor: isDark ? "#0f2338" : "#0a2540" }]}>
+          <View style={s.heroLeft}>
+            <View style={s.heroBadge}>
+              <MaterialIcons name="verified" size={13} color="#00b4d8" />
+              <Text style={s.heroBadgeText}>CALIFNCO SMART TECH</Text>
+            </View>
+            <Text style={s.heroTitle}>Clean Water{"\n"}for a Healthier You</Text>
+            <Text style={s.heroSub}>Advanced RO + UV + UF Filtration</Text>
+          </View>
+          <View style={s.heroPurifierThumb}>
+            <Image
+              source={{ uri: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=400&auto=format&fit=crop&q=80" }}
+              style={s.heroPurifierImg}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
+        {/* 3. 4-Item Quick Action Navigation (Screen 7) */}
+        <View style={s.quickNavRow}>
           <TouchableOpacity
-            style={s.topBarIconBtn}
+            style={s.quickNavItem}
             onPress={() => {
-              const role = (profile?.role || "").toLowerCase();
-              navigation.navigate(role === "admin" ? "AdminOrders" : role === "dealer" ? "DealerOrders" : "Orders");
+              setActiveCategory("All");
+              setSearch("");
             }}
             activeOpacity={0.8}
-            accessibilityLabel="Notifications"
           >
-            <MaterialIcons name="notifications-none" size={22} color="#ffffff" />
-            <View style={s.badgeDot} />
+            <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
+              <MaterialIcons name="storefront" size={24} color="#00b4d8" />
+            </View>
+            <Text style={[s.quickNavLabel, { color: theme.text }]}>Catalog</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[s.topBarIconBtn, s.logoutBtn]}
+            style={s.quickNavItem}
             onPress={() => {
-              Alert.alert(
-                "Sign Out",
-                "Are you sure you want to sign out from your account?",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Sign Out", style: "destructive", onPress: () => logout() }
-                ]
-              );
+              nav.navigate(role === "admin" ? "AdminOrders" : role === "dealer" ? "DealerOrders" : "Orders");
             }}
             activeOpacity={0.8}
-            accessibilityLabel="Sign Out"
           >
-            <MaterialIcons name="logout" size={18} color="#ffffff" />
+            <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
+              <MaterialIcons name="receipt-long" size={24} color="#00b4d8" />
+            </View>
+            <Text style={[s.quickNavLabel, { color: theme.text }]}>My Orders</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickNavItem}
+            onPress={() => nav.navigate("Service")}
+            activeOpacity={0.8}
+          >
+            <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
+              <MaterialIcons name="handyman" size={24} color="#00b4d8" />
+            </View>
+            <Text style={[s.quickNavLabel, { color: theme.text }]}>Services</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickNavItem}
+            onPress={() => nav.navigate("Profile")}
+            activeOpacity={0.8}
+          >
+            <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
+              <MaterialIcons name="person-outline" size={24} color="#00b4d8" />
+            </View>
+            <Text style={[s.quickNavLabel, { color: theme.text }]}>Profile</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* 2. Hero Gradient Banner: "Clean Water for a Healthier You" (Screen 7) */}
-      <View style={[s.heroBanner, { backgroundColor: isDark ? "#0f2338" : "#0a2540" }]}>
-        <View style={s.heroLeft}>
-          <View style={s.heroBadge}>
-            <MaterialIcons name="verified" size={13} color="#00b4d8" />
-            <Text style={s.heroBadgeText}>CALIFNCO SMART TECH</Text>
-          </View>
-          <Text style={s.heroTitle}>Clean Water{"\n"}for a Healthier You</Text>
-          <Text style={s.heroSub}>Advanced RO + UV + UF Filtration</Text>
-        </View>
-        <View style={s.heroPurifierThumb}>
-          <Image
-            source={{ uri: "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=400&auto=format&fit=crop&q=80" }}
-            style={s.heroPurifierImg}
-            resizeMode="contain"
-          />
-        </View>
-      </View>
-
-      {/* 3. 4-Item Quick Action Navigation (Screen 7) */}
-      <View style={s.quickNavRow}>
-        <TouchableOpacity
-          style={s.quickNavItem}
-          onPress={() => {
-            setActiveCategory("All");
-            setSearch("");
-          }}
-          activeOpacity={0.8}
-        >
-          <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
-            <MaterialIcons name="storefront" size={24} color="#00b4d8" />
-          </View>
-          <Text style={[s.quickNavLabel, { color: theme.text }]}>Catalog</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.quickNavItem}
-          onPress={() => {
-            const role = (profile?.role || "").toLowerCase();
-            navigation.navigate(role === "admin" ? "AdminOrders" : role === "dealer" ? "DealerOrders" : "Orders");
-          }}
-          activeOpacity={0.8}
-        >
-          <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
-            <MaterialIcons name="receipt-long" size={24} color="#00b4d8" />
-          </View>
-          <Text style={[s.quickNavLabel, { color: theme.text }]}>My Orders</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.quickNavItem}
-          onPress={() => navigation.navigate("Service")}
-          activeOpacity={0.8}
-        >
-          <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
-            <MaterialIcons name="handyman" size={24} color="#00b4d8" />
-          </View>
-          <Text style={[s.quickNavLabel, { color: theme.text }]}>Services</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={s.quickNavItem}
-          onPress={() => navigation.navigate("Profile")}
-          activeOpacity={0.8}
-        >
-          <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
-            <MaterialIcons name="person-outline" size={24} color="#00b4d8" />
-          </View>
-          <Text style={[s.quickNavLabel, { color: theme.text }]}>Profile</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Search Bar & Filter (Screen 8) */}
       <View style={[s.searchWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -208,16 +210,16 @@ export default function CatalogScreen({ navigation }) {
       </View>
 
       {/* 6. Category Filter Chips (Screen 8) */}
-      <FlatList
-        data={CATEGORIES}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={i => i.id}
         contentContainerStyle={s.catList}
-        renderItem={({ item }) => {
+      >
+        {CATEGORIES.map(item => {
           const isActive = activeCategory === item.id;
           return (
             <TouchableOpacity
+              key={item.id}
               style={[
                 s.catChip,
                 { backgroundColor: isActive ? "#00b4d8" : (isDark ? theme.card : "#ffffff") },
@@ -236,8 +238,8 @@ export default function CatalogScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
           );
-        }}
-      />
+        })}
+      </ScrollView>
 
       {/* 7. Results count */}
       <View style={s.countRow}>
@@ -246,7 +248,8 @@ export default function CatalogScreen({ navigation }) {
         </Text>
       </View>
     </View>
-  );
+    );
+  };
 
   return (
     <View style={[s.container, { backgroundColor: theme.background }]}>

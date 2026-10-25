@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
-  View, Text, FlatList, TextInput, TouchableOpacity,
+  View, Text, FlatList, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, Modal, Platform
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -64,6 +64,21 @@ export default function DealerCatalogScreen({ navigation }) {
     setSelectedProduct(product);
     setOrderQty(minQty);
   }
+
+  const renderProductItem = useCallback(({ item }) => {
+    const wholesale = wholesaleMap[item.id];
+    const wholesalePrice = wholesale?.price || item.price;
+    const minQty = wholesale?.minQty || 1;
+
+    return (
+      <ProductCard
+        product={item}
+        price={wholesalePrice}
+        badge={`Min ${minQty}`}
+        onPress={() => openOrderModal(item)}
+      />
+    );
+  }, [wholesaleMap]);
 
   function handleAddToCart() {
     if (!selectedProduct) return;
@@ -197,14 +212,14 @@ export default function DealerCatalogScreen({ navigation }) {
 
       {/* Category filter */}
       <View style={s.catContainer}>
-        <FlatList
-          data={CATEGORIES}
+        <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          keyExtractor={i => i.id}
           contentContainerStyle={s.catList}
-          renderItem={({ item }) => (
+        >
+          {CATEGORIES.map(item => (
             <TouchableOpacity
+              key={item.id}
               style={[s.catChip, activeCategory === item.id && s.catChipActive]}
               onPress={() => setActiveCategory(item.id)}
               activeOpacity={0.75}
@@ -213,8 +228,8 @@ export default function DealerCatalogScreen({ navigation }) {
                 {item.label}
               </Text>
             </TouchableOpacity>
-          )}
-        />
+          ))}
+        </ScrollView>
       </View>
 
       {/* Product count */}
@@ -234,20 +249,7 @@ export default function DealerCatalogScreen({ navigation }) {
         maxToRenderPerBatch={8}
         windowSize={7}
         removeClippedSubviews={Platform.OS === "android"}
-        renderItem={({ item }) => {
-          const wholesale = wholesaleMap[item.id];
-          const wholesalePrice = wholesale?.price || item.price;
-          const minQty = wholesale?.minQty || 1;
-
-          return (
-            <ProductCard
-              product={item}
-              price={wholesalePrice}
-              badge={`Min ${minQty}`}
-              onPress={() => openOrderModal(item)}
-            />
-          );
-        }}
+        renderItem={renderProductItem}
       />
 
       {/* Quick Wholesale Order Modal */}

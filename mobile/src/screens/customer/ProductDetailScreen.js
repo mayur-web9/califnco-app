@@ -315,7 +315,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           </View>
           <TouchableOpacity
             style={s.toastCartBtn}
-            onPress={() => navigation.navigate("Cart")}
+            onPress={() => (navigation.getParent() || navigation).navigate("Cart")}
             activeOpacity={0.8}
           >
             <Text style={s.toastCartBtnText}>View Cart →</Text>
@@ -347,7 +347,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           style={[s.buyBtn, { backgroundColor: theme.primary }]}
           onPress={() => {
             addItem(product, qty);
-            navigation.navigate("Cart");
+            (navigation.getParent() || navigation).navigate("Cart");
           }}
           disabled={product.stock === 0}
           activeOpacity={0.85}

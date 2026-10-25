@@ -159,6 +159,22 @@ function DealerTabs() {
         component={ProfileScreen}
         options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />, tabBarLabel: "Profile" }}
       />
+      {/* Hidden aliases for nested/universal navigation safety */}
+      <Tab.Screen
+        name="Catalog"
+        component={DealerCatalogScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: "none" }, headerShown: false }}
+      />
+      <Tab.Screen
+        name="Cart"
+        component={CartStack}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: "none" }, headerShown: false }}
+      />
+      <Tab.Screen
+        name="Orders"
+        component={DealerOrdersScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: "none" }, headerShown: false }}
+      />
     </Tab.Navigator>
   );
 }
@@ -204,6 +220,17 @@ function AdminTabs() {
         name="AdminProfile"
         component={ProfileScreen}
         options={{ headerShown: false, tabBarIcon: ({ color, size }) => <MaterialIcons name="person" size={size} color={color} />, tabBarLabel: "Profile" }}
+      />
+      {/* Hidden aliases for nested/universal navigation safety */}
+      <Tab.Screen
+        name="Catalog"
+        component={AdminProductsScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: "none" }, headerShown: false }}
+      />
+      <Tab.Screen
+        name="Orders"
+        component={AdminOrdersScreen}
+        options={{ tabBarButton: () => null, tabBarItemStyle: { display: "none" }, headerShown: false }}
       />
     </Tab.Navigator>
   );

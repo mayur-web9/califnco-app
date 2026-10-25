@@ -556,7 +556,7 @@ export default function CheckoutScreen({ navigation }) {
         onSecondaryPress={() => {
           setSuccessModalVisible(false);
           const target = (profile?.role || "").toLowerCase() === "dealer" ? "DealerOrders" : "Orders";
-          navigation.navigate(target);
+          (navigation.getParent() || navigation).navigate(target);
         }}
         iconName="check-circle"
         iconColor="#10b981"
@@ -568,7 +568,7 @@ export default function CheckoutScreen({ navigation }) {
         onClose={() => {
           setInvoiceModalVisible(false);
           const target = (profile?.role || "").toLowerCase() === "dealer" ? "DealerOrders" : "Orders";
-          navigation.navigate(target);
+          (navigation.getParent() || navigation).navigate(target);
         }}
         order={confirmedOrder}
       />

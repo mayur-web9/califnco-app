@@ -40,6 +40,18 @@ export default function OrdersScreen({ navigation }) {
     setRefreshing(false);
   }
 
+  function handleExploreProducts() {
+    const role = (profile?.role || "").toLowerCase().trim();
+    const nav = navigation.getParent() || navigation;
+    if (role === "dealer") {
+      nav.navigate("DealerCatalog");
+    } else if (role === "admin") {
+      nav.navigate("AdminProducts");
+    } else {
+      nav.navigate("Catalog");
+    }
+  }
+
   function handleOpenInvoice(order) {
     setSelectedOrder(order);
     setShowInvoiceModal(true);
@@ -133,7 +145,7 @@ export default function OrdersScreen({ navigation }) {
             </Text>
             <TouchableOpacity
               style={s.shopBtn}
-              onPress={() => navigation.navigate("Catalog")}
+              onPress={handleExploreProducts}
               activeOpacity={0.85}
             >
               <MaterialIcons name="shopping-bag" size={18} color="#ffffff" style={{ marginRight: 8 }} />
