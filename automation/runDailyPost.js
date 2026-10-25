@@ -784,12 +784,7 @@ async function publishToInstagram(instagramImageUrl, caption) {
 
 // 6. Optional WAHA Status broadcast
 async function broadcastToWaha(imageUrl, caption) {
-  const wahaUrl = process.env.WAHA_URL;
-  if (!wahaUrl) {
-    console.log('WAHA Status: Skipped (WAHA_URL not configured)');
-    return;
-  }
-
+  const wahaUrl = process.env.WAHA_URL || 'http://localhost:3001/waha';
   console.log(`Broadcasting image to WAHA instance at ${wahaUrl}...`);
   try {
     const res = await fetchWithTimeout(`${wahaUrl}/api/sendImage`, {

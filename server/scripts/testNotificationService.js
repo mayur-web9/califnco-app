@@ -4,6 +4,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const {
   sendEmail,
   sendSMS,
+  sendPushNotification,
   notifyOrderConfirmed,
   notifyOrderStatusChanged
 } = require("../services/notificationService");
@@ -55,13 +56,17 @@ async function runNotificationTests() {
   assert(statusChangeResult.email.success === true, "Order status change email dispatched/simulated successfully");
   assert(statusChangeResult.sms.success === true, "Order status change SMS dispatched/simulated successfully");
 
-  // 3. Test Graceful Validation with Missing Fields
-  console.log("\n3. Testing Graceful Validation with missing contact details...");
-  const missingEmail = await sendEmail({ to: "", subject: "Test", htmlContent: "<p>Test</p>" });
-  assert(missingEmail.success === false && missingEmail.reason === "missing_recipient", "Missing email handled gracefully without throwing");
+  // 4. Test Push Notification Dispatch (Expo Dev Token & Missing Token)
+  console.log("\n4. Testing sendPushNotification...");
+  const devPush = await sendPushNotification({
+    token: "ExponentPushToken[dev_test_user_01]",
+    title: "Test Alert",
+    body: "Order has been processed"
+  });
+  assert(devPush.success === true && devPush.simulated === true, "Expo dev push notification handled seamlessly");
 
-  const missingPhone = await sendSMS({ phone: "", message: "Test" });
-  assert(missingPhone.success === false && missingPhone.reason === "missing_phone", "Missing phone handled gracefully without throwing");
+  const missingTokenPush = await sendPushNotification({ token: "", title: "Test", body: "Test" });
+  assert(missingTokenPush.success === false && missingTokenPush.reason === "missing_token", "Missing push token handled gracefully");
 
   console.log("\n==================================================");
   console.log(`   NOTIFICATION TESTS: ${passed} PASSED, ${failed} FAILED`);

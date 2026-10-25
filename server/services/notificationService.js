@@ -1,15 +1,22 @@
-// Notification Service: Handles Email (Brevo REST API / SMTP) and SMS (TextBee)
+// Notification Service: Multi-Channel Alerts (Email: Brevo/Resend, SMS: TextBee/Fast2SMS/Twilio, Push: Expo/FCM)
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
+// Provider Configuration
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "orders@califnco.com";
+
 const TEXTBEE_API_KEY = process.env.TEXTBEE_API_KEY || "";
 const TEXTBEE_DEVICE_ID = process.env.TEXTBEE_DEVICE_ID || "";
+const FAST2SMS_API_KEY = process.env.FAST2SMS_API_KEY || "";
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || "";
 
 /**
- * Send Transactional Email using Brevo REST API v3
- * Free tier: 300 emails/day without credit card
+ * Send Transactional Email using Brevo REST API v3 or Resend API
+ * Free tier: Brevo = 300 emails/day without credit card; Resend = 3,000 emails/month
  */
 async function sendEmail({ to, toName, subject, htmlContent }) {
   if (!to) {
@@ -17,6 +24,33 @@ async function sendEmail({ to, toName, subject, htmlContent }) {
     return { success: false, reason: "missing_recipient" };
   }
 
+  // 1. Resend API
+  if (RESEND_API_KEY && RESEND_API_KEY.startsWith("re_")) {
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from: EMAIL_FROM.includes("@") ? EMAIL_FROM : "orders@califnco.com",
+          to: [to],
+          subject: subject,
+          html: htmlContent
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || `Resend API error: ${response.status}`);
+      console.log(`[EMAIL DISPATCHED - Resend] ID: ${data.id} to ${to}`);
+      return { success: true, messageId: data.id, provider: "resend" };
+    } catch (err) {
+      console.warn(`[EMAIL ERROR] Resend call failed: ${err.message}.`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // 2. Brevo API v3
   if (BREVO_API_KEY && BREVO_API_KEY.startsWith("xkeysib-")) {
     try {
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -45,22 +79,21 @@ async function sendEmail({ to, toName, subject, htmlContent }) {
       console.warn(`[EMAIL ERROR] Brevo API call failed: ${err.message}. Logging intent.`);
       return { success: false, error: err.message };
     }
-  } else {
-    // Simulated / Logged mode for development & evaluation
-    console.log(`\n======================================================`);
-    console.log(`[TRANSACTIONAL EMAIL LOGGED - Brevo Provider Ready]`);
-    console.log(`From:    ${EMAIL_FROM}`);
-    console.log(`To:      ${to} (${toName || "Customer"})`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Status:  Queued (Configure BREVO_API_KEY in .env for live dispatch)`);
-    console.log(`======================================================\n`);
-    return { success: true, simulated: true, provider: "brevo_simulated" };
   }
+
+  // 3. Simulated / Logged mode for development & evaluation
+  console.log(`\n======================================================`);
+  console.log(`[TRANSACTIONAL EMAIL LOGGED - Ready for Brevo / Resend]`);
+  console.log(`From:    ${EMAIL_FROM}`);
+  console.log(`To:      ${to} (${toName || "Customer"})`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Status:  Queued (Provide BREVO_API_KEY or RESEND_API_KEY in server/.env for live dispatch)`);
+  console.log(`======================================================\n`);
+  return { success: true, simulated: true, provider: "email_simulated" };
 }
 
 /**
- * Send SMS using TextBee Free Android Gateway
- * Free tier: 100% free via Android device carrier quota (bypasses TRAI DLT registration)
+ * Send SMS using TextBee (Android SIM gateway), Fast2SMS (India Quick SMS), or Twilio
  */
 async function sendSMS({ phone, message }) {
   if (!phone) {
@@ -68,12 +101,42 @@ async function sendSMS({ phone, message }) {
     return { success: false, reason: "missing_phone" };
   }
 
-  // Normalize phone number (ensure +91 prefix for Indian mobile numbers)
+  // Normalize phone number
   let cleanPhone = phone.replace(/[^0-9+]/g, "");
+  const rawDigits = cleanPhone.replace(/\+/g, "");
+  const tenDigitPhone = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+
   if (!cleanPhone.startsWith("+")) {
     cleanPhone = cleanPhone.length === 10 ? `+91${cleanPhone}` : `+${cleanPhone}`;
   }
 
+  // 1. Fast2SMS (Free India Quick SMS)
+  if (FAST2SMS_API_KEY) {
+    try {
+      const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+        method: "POST",
+        headers: {
+          "authorization": FAST2SMS_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          route: "q",
+          message: message,
+          flash: 0,
+          numbers: tenDigitPhone
+        })
+      });
+      const data = await response.json();
+      if (!data.return) throw new Error(data.message || "Fast2SMS error");
+      console.log(`[SMS DISPATCHED - Fast2SMS] Sent to ${tenDigitPhone}`);
+      return { success: true, provider: "fast2sms" };
+    } catch (err) {
+      console.warn(`[SMS ERROR] Fast2SMS failed: ${err.message}.`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // 2. TextBee (Android Phone Gateway)
   if (TEXTBEE_API_KEY && TEXTBEE_DEVICE_ID) {
     try {
       const response = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${TEXTBEE_DEVICE_ID}/send-sms`, {
@@ -99,16 +162,106 @@ async function sendSMS({ phone, message }) {
       console.warn(`[SMS ERROR] TextBee API call failed: ${err.message}. Logging intent.`);
       return { success: false, error: err.message };
     }
-  } else {
-    // Simulated / Logged mode for development & evaluation
-    console.log(`\n======================================================`);
-    console.log(`[TRANSACTIONAL SMS LOGGED - TextBee Gateway Ready]`);
-    console.log(`To:      ${cleanPhone}`);
-    console.log(`Message: ${message}`);
-    console.log(`Status:  Queued (Configure TEXTBEE_API_KEY & DEVICE_ID in .env for live dispatch)`);
-    console.log(`======================================================\n`);
-    return { success: true, simulated: true, provider: "textbee_simulated" };
   }
+
+  // 3. Twilio SMS
+  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER) {
+    try {
+      const authHeader = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64");
+      const bodyParams = new URLSearchParams({
+        To: cleanPhone,
+        From: TWILIO_PHONE_NUMBER,
+        Body: message
+      });
+
+      const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Basic ${authHeader}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: bodyParams.toString()
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || `Twilio error: ${response.status}`);
+      console.log(`[SMS DISPATCHED - Twilio] SID: ${data.sid} to ${cleanPhone}`);
+      return { success: true, provider: "twilio", messageId: data.sid };
+    } catch (err) {
+      console.warn(`[SMS ERROR] Twilio call failed: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // 4. Simulated / Logged mode for development & evaluation
+  console.log(`\n======================================================`);
+  console.log(`[TRANSACTIONAL SMS LOGGED - Ready for TextBee / Fast2SMS / Twilio]`);
+  console.log(`To:      ${cleanPhone}`);
+  console.log(`Message: ${message}`);
+  console.log(`Status:  Queued (Provide TEXTBEE, FAST2SMS, or TWILIO keys in server/.env for live dispatch)`);
+  console.log(`======================================================\n`);
+  return { success: true, simulated: true, provider: "sms_simulated" };
+}
+
+/**
+ * Send Push Notification using Expo Push API (Zero keys needed) or FCM
+ */
+async function sendPushNotification({ token, title, body, data = {}, adminInstance = null }) {
+  if (!token) {
+    return { success: false, reason: "missing_token" };
+  }
+
+  // 1. Real Expo Push Token (Delivers directly to physical Expo devices for free with zero setup)
+  if (typeof token === "string" && token.startsWith("ExponentPushToken[") && !token.includes("dev_")) {
+    try {
+      const response = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Accept-Encoding": "gzip, deflate",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          to: token,
+          sound: "default",
+          title: title,
+          body: body,
+          data: data
+        })
+      });
+
+      const result = await response.json();
+      console.log(`[EXPO PUSH DISPATCHED] To: ${token.slice(0, 30)}... Result: ${result.data?.status || "ok"}`);
+      return { success: true, provider: "expo", result };
+    } catch (err) {
+      console.warn(`[EXPO PUSH ERROR] ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // 2. Mock / Dev Expo token generated in emulator
+  if (typeof token === "string" && token.includes("dev_")) {
+    console.log(`[PUSH NOTIFICATION LOGGED - Dev Client Token] Title: "${title}" Body: "${body}"`);
+    return { success: true, simulated: true, provider: "expo_dev_simulated" };
+  }
+
+  // 3. Standard Firebase FCM Token
+  if (adminInstance && typeof adminInstance.messaging === "function") {
+    try {
+      const res = await adminInstance.messaging().send({
+        token,
+        notification: { title, body },
+        data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))
+      });
+      console.log(`[FCM PUSH DISPATCHED] MessageId: ${res}`);
+      return { success: true, provider: "fcm", messageId: res };
+    } catch (err) {
+      console.warn(`[FCM PUSH ERROR] ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  return { success: false, reason: "unsupported_token_format" };
 }
 
 /**
@@ -201,6 +354,8 @@ async function notifyOrderStatusChanged({ email, customerName, phone, orderId, n
 module.exports = {
   sendEmail,
   sendSMS,
+  sendPushNotification,
   notifyOrderConfirmed,
   notifyOrderStatusChanged
 };
+
