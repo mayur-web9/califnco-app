@@ -6,7 +6,7 @@ import { formatPrice } from "../utils/formatPrice";
 import { getProductImageSource } from "../constants/productImages";
 import { useCart } from "../hooks/useCart";
 
-export default function ProductCard({ product, onPress, price = null, badge = null }) {
+const ProductCard = React.memo(function ProductCard({ product, onPress, price = null, badge = null }) {
   const displayPrice = price ?? product.price;
   const { addItem } = useCart();
   const [justAdded, setJustAdded] = useState(false);
@@ -164,7 +164,9 @@ export default function ProductCard({ product, onPress, price = null, badge = nu
       </View>
     </TouchableOpacity>
   );
-}
+});
+
+export default ProductCard;
 
 
 const s = StyleSheet.create({

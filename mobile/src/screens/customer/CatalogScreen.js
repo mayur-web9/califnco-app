@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Alert, Image, Animated
+  StyleSheet, ActivityIndicator, Alert, Image, Animated, Platform
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { getProducts } from "../../services/productService";
@@ -241,6 +241,13 @@ export default function CatalogScreen({ navigation }) {
     </View>
   );
 
+  const renderProductItem = useCallback(({ item }) => (
+    <ProductCard
+      product={item}
+      onPress={() => navigation.navigate("ProductDetail", { product: item })}
+    />
+  ), [navigation]);
+
   return (
     <View style={[s.container, { backgroundColor: theme.background }]}>
       <FlatList
@@ -251,6 +258,10 @@ export default function CatalogScreen({ navigation }) {
         contentContainerStyle={s.grid}
         columnWrapperStyle={s.row}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={
           <View style={s.empty}>
@@ -270,12 +281,7 @@ export default function CatalogScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         }
-        renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            onPress={() => navigation.navigate("ProductDetail", { product: item })}
-          />
-        )}
+        renderItem={renderProductItem}
       />
     </View>
   );

@@ -1,5 +1,13 @@
 import { registerRootComponent } from "expo";
+import { LogBox } from "react-native";
 import App from "./App";
+
+LogBox.ignoreLogs([
+  "SafeAreaView has been deprecated",
+  "[expo-notifications]",
+  "`expo-notifications` functionality is not fully supported in Expo Go",
+  "VirtualizedList: You have a large list that is slow to update",
+]);
 
 // Safeguard against unhandled native promise rejections (e.g. SDK notifications in Expo Go)
 if (typeof global !== "undefined") {

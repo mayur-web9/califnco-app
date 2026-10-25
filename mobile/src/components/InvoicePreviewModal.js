@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Dimensions, SafeAreaView
+  Dimensions
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import PrintedReceipt from "./PrintedReceipt";
 import colors from "../constants/colors";

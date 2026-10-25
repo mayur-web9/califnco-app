@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Alert, Modal
+  StyleSheet, ActivityIndicator, Alert, Modal, Platform
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { getProducts, getWholesalePrices } from "../../services/productService";
@@ -230,6 +230,10 @@ export default function DealerCatalogScreen({ navigation }) {
         contentContainerStyle={s.grid}
         columnWrapperStyle={s.row}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === "android"}
         renderItem={({ item }) => {
           const wholesale = wholesaleMap[item.id];
           const wholesalePrice = wholesale?.price || item.price;
