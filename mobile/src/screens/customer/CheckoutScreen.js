@@ -224,7 +224,7 @@ export default function CheckoutScreen({ navigation }) {
   function renderCheckoutHtml() {
     if (!checkoutData) return "";
     const cleanPhone = (profile?.phone || "9876543210").replace(/[^0-9]/g, "").slice(-10) || "9876543210";
-    const rzpKey = (checkoutData.keyId && checkoutData.keyId !== "rzp_test_placeholder") ? checkoutData.keyId : "rzp_test_TrHrkbqyzMD5i0";
+    const rzpKey = (checkoutData.keyId && checkoutData.keyId !== "rzp_test_placeholder") ? checkoutData.keyId : (process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "");
     const isLiveOrderId = checkoutData.orderId && !checkoutData.orderId.startsWith("order_test_") && !checkoutData.orderId.startsWith("order_demo_");
 
     return `

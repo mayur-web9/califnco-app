@@ -1,12 +1,11 @@
 # Environment files — never commit secrets
-.env
-.env.local
-.env.development
-.env.production
+.env*
 *.env
+!.env.example
 
 # Node
 node_modules/
+dist/
 npm-debug.log*
 yarn-error.log*
 
@@ -27,6 +26,7 @@ firebase-debug.log
 firestore-debug.log
 
 # Service account keys — treat as secrets
+serviceAccountKey*.json
 *serviceAccountKey*.json
 *service-account*.json
 *firebase-adminsdk*.json

@@ -7,8 +7,8 @@ async function testGroqCall() {
   console.log("   TEST 1: REAL CALL TO GROQ API (llama-3.3-70b-versatile)");
   console.log("=======================================================");
 
-  const groqApiKey = process.env.GROQ_API_KEY || "gsk_test_placeholder";
-  console.log(`Using GROQ_API_KEY: ${groqApiKey.startsWith("gsk_") && groqApiKey !== "gsk_test_placeholder" ? "Configured (masked)" : "Placeholder / Unset"}`);
+  const groqApiKey = process.env.GROQ_API_KEY || "";
+  console.log(`Using GROQ_API_KEY: ${groqApiKey ? "Configured (masked)" : "Not Set"}`);
 
   const payload = {
     model: "llama-3.3-70b-versatile",
@@ -65,8 +65,8 @@ async function testHuggingFaceCall() {
   console.log("   TEST 2: REAL CALL TO HUGGING FACE INFERENCE (FLUX.1)");
   console.log("=======================================================");
 
-  const hfToken = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN || "hf_test_placeholder";
-  console.log(`Using HUGGINGFACE_API_KEY: ${hfToken.startsWith("hf_") && hfToken !== "hf_test_placeholder" ? "Configured (masked)" : "Placeholder / Unset"}`);
+  const hfToken = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN || "";
+  console.log(`Using HUGGINGFACE_API_KEY: ${hfToken ? "Configured (masked)" : "Not Set"}`);
 
   const prompt = "Studio commercial photograph of luxury domestic water purifier appliance on white marble kitchen counter, 8k resolution";
 
