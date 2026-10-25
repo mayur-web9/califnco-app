@@ -1,0 +1,39 @@
+name: Daily Califnco Social Post
+
+on:
+  schedule:
+    # 04:30 UTC = 10:00 AM IST daily
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  daily-post:
+    name: Run Daily Social Media Automation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          cd server
+          npm ci --omit=dev || npm install --omit=dev
+
+      - name: Run daily post automation
+        run: node automation/runDailyPost.js
+        env:
+          NODE_PATH: server/node_modules
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          WAHA_URL: ${{ secrets.WAHA_URL }}
