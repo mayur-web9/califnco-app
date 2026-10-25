@@ -16,7 +16,7 @@ Submission Date: 25 October 2026
 | **Admin Web Portal** | `https://califnco-app-phi.vercel.app` | Hosted on Vercel |
 | **Backend REST API** | `https://califnco-app.onrender.com` | Health endpoint: `https://califnco-app.onrender.com/health` |
 | **Standalone Android APK** | [Download APK](https://expo.dev/artifacts/eas/0CE54Nq4YFMHztXnvg6rSMadDKrIyU8INncF5MAhn7s.apk) | Build ID: `8ab46fe7` via EAS Cloud |
-| **Live Instagram Daily Post** | `https://www.instagram.com/p/De5_i2yDSfK/` | Published live via Instagram Graph API |
+| **Live Instagram Daily Post** | `https://www.instagram.com/p/De6Czs2jY42/` | Published live via Instagram Graph API |
 | **Clean ZIP Submission Archive** | `califnco-submission-clean.zip` | Root directory (zero secrets, zero node_modules) |
 | **Automation Workflow (n8n)** | `automation/workflow.json` | 1-click importable workflow file |
 | **GitHub Actions Workflow** | `.github/workflows/daily-post.yml` | Scheduled daily at 10:00 AM IST (04:30 UTC) |
@@ -72,13 +72,14 @@ Command lines and real test suite results executed in this repository:
    - Tampered client items in request body are discarded in favor of server-stored session records
    - Nominatim address lookup proxy
 4. **Daily Post Automation (`node automation/runDailyPost.js`)**:
-   - Live execution successfully retrieved next product (`prod_purifier_11`) from live Render catalog rotation
-   - Generated factual caption via Groq (`openai/gpt-oss-120b`) without invented claims or discounts
-   - Synthesized product image via Pollinations FLUX (59.0 KB valid JPEG)
+   - Live execution successfully retrieved next product (`prod_spare_03`) from live Render catalog rotation
+   - Generated factual caption via Groq (`openai/gpt-oss-120b`) forbidding unverified numeric claims
+   - Synthesized product image via Pollinations FLUX with deterministic seed (`361811`)
+   - Cropped bottom 8% watermark and resized to 1080x1080 JPEG using `sharp` (71.2 KB, validated > 30 KB)
    - Uploaded to Cloudinary with signed credentials (`califnco/daily-posts`)
    - Confirmed transformed 1:1 Instagram image URL returns HTTP 200 and `image/jpeg` via HEAD request
-   - Published live post via Instagram Graph API: Container `18084252779401221`, Media `18632766847061883`
-   - Verified live post online: `https://www.instagram.com/p/De5_i2yDSfK/`
+   - Published live post via Instagram Graph API: Container `18084260447401221`, Media `18034520552889345`
+   - Verified live post online: `https://www.instagram.com/p/De6Czs2jY42/`
 5. **Admin Web Portal Build (`npm run build` in `admin-web`)**:
    - Built cleanly with Vite in 4.24s with zero compilation or lint errors.
 

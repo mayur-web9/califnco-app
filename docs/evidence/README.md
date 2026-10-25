@@ -11,7 +11,7 @@ Please save the following screenshots in this folder to accompany the submission
 | **Server Security & Idempotency Output** | `server_test_output.png` | Screenshot of terminal running `node server/scripts/testServerSecurityAndIdempotency.js` showing 28 PASSED, 0 FAILED (idempotency, stock decrement rollback, cancelled payment test). | Captured in terminal logs |
 | **GitHub Actions Run** | `github_actions_run.png` | Screenshot of the GitHub Actions web interface under `.github/workflows/daily-post.yml` showing a successful or dispatched run of the daily post automation. | Ready to capture in GitHub Actions |
 | **Cloudinary Media Upload** | `cloudinary_upload.png` | Screenshot of the Cloudinary Media Library under `califnco/daily-posts` showing the generated product image and the 1:1 Instagram transformation URL. | Available in Cloudinary dashboard |
-| **Instagram Post** | `instagram_post.png` | Screenshot of the live published Instagram post on the connected professional account (`https://www.instagram.com/p/De5_i2yDSfK/`). | LIVE (`https://www.instagram.com/p/De5_i2yDSfK/`) |
+| **Instagram Post** | `instagram_post.png` | Screenshot of the live published Instagram post on the connected professional account (`https://www.instagram.com/p/De6Czs2jY42/`). | LIVE (`https://www.instagram.com/p/De6Czs2jY42/`) |
 | **Live Admin Panel** | `live_admin_panel.png` | Screenshot of the Vercel-deployed executive admin web portal showing orders list with retail/bulk filters, dealer approvals, and service desk tickets. | Accessible on Vercel deployment |
 
 ---
