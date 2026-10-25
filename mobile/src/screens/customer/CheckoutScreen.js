@@ -125,9 +125,9 @@ export default function CheckoutScreen({ navigation }) {
     } catch (err) {
       clearTimeout(timeoutId);
       if (err.name === "AbortError") {
-        Alert.alert("Server Notice", "Server is taking longer to respond. You can use 'Fast Test Checkout' below to complete your order immediately.");
+        Alert.alert("Server Notice", "Server is taking longer to respond (cloud instance wake-up). Please try again in a few moments.");
       } else {
-        Alert.alert("Payment Initialization Failed", `${err.message}\n\nYou can use 'Fast Test Checkout' to place this order directly.`);
+        Alert.alert("Payment Initialization Failed", err.message || "Could not reach payment server. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -496,8 +496,6 @@ const s = StyleSheet.create({
   footer: { padding: 16, paddingBottom: 32 },
   placeBtn: { backgroundColor: colors.primary, borderRadius: 12, padding: 18, alignItems: "center" },
   placeBtnText: { color: "#fff", fontSize: 17, fontWeight: "800" },
-  testPlaceBtn: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary, borderRadius: 12, padding: 15, alignItems: "center", marginTop: 12 },
-  testPlaceBtnText: { color: colors.primary, fontSize: 15, fontWeight: "700" },
   modalHeader: { height: 56, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
   modalHeaderTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
   modalClose: { color: "#fff", fontSize: 22, fontWeight: "700", padding: 6 }

@@ -88,8 +88,15 @@ export default function OrdersScreen({ navigation }) {
                 <Text style={s.orderId}>Order #{item.id.slice(-6).toUpperCase()}</Text>
                 <Text style={s.date}>{formatDate(item.createdAt)}</Text>
               </View>
-              <View style={[s.statusChip, { backgroundColor: statusColor(item.status) + "22" }]}>
-                <Text style={[s.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={[s.typeChip, { backgroundColor: item.type === "bulk" ? "#eff6ff" : "#f0fdf4" }]}>
+                  <Text style={[s.typeText, { color: item.type === "bulk" ? "#2563eb" : "#16a34a" }]}>
+                    {item.type === "bulk" ? "BULK" : "RETAIL"}
+                  </Text>
+                </View>
+                <View style={[s.statusChip, { backgroundColor: statusColor(item.status) + "22" }]}>
+                  <Text style={[s.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
+                </View>
               </View>
             </View>
 
@@ -188,6 +195,8 @@ const s = StyleSheet.create({
   date: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   statusChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText: { fontSize: 12, fontWeight: "700", textTransform: "capitalize" },
+  typeChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  typeText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
   itemRow: { fontSize: 13, color: colors.textSecondary, marginBottom: 4 },
   moreItems: { fontSize: 12, color: colors.textMuted, marginBottom: 4, fontStyle: "italic" },

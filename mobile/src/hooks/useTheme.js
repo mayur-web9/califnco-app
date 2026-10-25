@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const THEME_STORAGE_KEY = "@califnco_theme_mode";
@@ -67,20 +68,23 @@ const ThemeContext = createContext({
 });
 
 export function ThemeProvider({ children }) {
-  const [isDark, setIsDark] = useState(false);
+  const systemScheme = useColorScheme();
+  const [isDark, setIsDark] = useState(systemScheme === "dark");
 
   useEffect(() => {
-    // Load persisted theme preference
+    // Load persisted theme preference or default to systemScheme
     AsyncStorage.getItem(THEME_STORAGE_KEY)
       .then((savedMode) => {
         if (savedMode === "dark") {
           setIsDark(true);
         } else if (savedMode === "light") {
           setIsDark(false);
+        } else {
+          setIsDark(systemScheme === "dark");
         }
       })
       .catch((err) => console.warn("Could not load theme preference:", err.message));
-  }, []);
+  }, [systemScheme]);
 
   const toggleTheme = async () => {
     const nextMode = !isDark;

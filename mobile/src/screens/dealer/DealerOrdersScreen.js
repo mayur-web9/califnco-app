@@ -79,8 +79,15 @@ export default function DealerOrdersScreen() {
                 <Text style={s.orderId}>Invoice #{item.id.slice(-6).toUpperCase()}</Text>
                 <Text style={s.date}>{formatDate(item.createdAt)}</Text>
               </View>
-              <View style={[s.statusChip, { backgroundColor: statusColor(item.status) + "22" }]}>
-                <Text style={[s.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={[s.typeChip, { backgroundColor: item.type === "retail" ? "#f0fdf4" : "#eff6ff" }]}>
+                  <Text style={[s.typeText, { color: item.type === "retail" ? "#16a34a" : "#2563eb" }]}>
+                    {item.type === "retail" ? "RETAIL" : "BULK"}
+                  </Text>
+                </View>
+                <View style={[s.statusChip, { backgroundColor: statusColor(item.status) + "22" }]}>
+                  <Text style={[s.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
+                </View>
               </View>
             </View>
 
@@ -138,6 +145,8 @@ const s = StyleSheet.create({
   date: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   statusChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText: { fontSize: 12, fontWeight: "700", textTransform: "capitalize" },
+  typeChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  typeText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 12 },
   itemRow: { marginBottom: 6 },
   itemName: { fontSize: 13, fontWeight: "600", color: colors.text },
