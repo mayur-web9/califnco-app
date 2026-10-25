@@ -16,6 +16,7 @@ Submission Date: 25 October 2026
 | **Admin Web Portal** | `https://califnco-app-phi.vercel.app` | Hosted on Vercel |
 | **Backend REST API** | `https://califnco-app.onrender.com` | Health endpoint: `https://califnco-app.onrender.com/health` |
 | **Standalone Android APK** | [Download APK](https://expo.dev/artifacts/eas/0CE54Nq4YFMHztXnvg6rSMadDKrIyU8INncF5MAhn7s.apk) | Build ID: `8ab46fe7` via EAS Cloud |
+| **Live Instagram Daily Post** | `https://www.instagram.com/p/De5_i2yDSfK/` | Published live via Instagram Graph API |
 | **Clean ZIP Submission Archive** | `califnco-submission-clean.zip` | Root directory (zero secrets, zero node_modules) |
 | **Automation Workflow (n8n)** | `automation/workflow.json` | 1-click importable workflow file |
 | **GitHub Actions Workflow** | `.github/workflows/daily-post.yml` | Scheduled daily at 10:00 AM IST (04:30 UTC) |
@@ -71,12 +72,13 @@ Command lines and real test suite results executed in this repository:
    - Tampered client items in request body are discarded in favor of server-stored session records
    - Nominatim address lookup proxy
 4. **Daily Post Automation (`node automation/runDailyPost.js`)**:
-   - Live execution successfully retrieved next product (`prod_purifier_09`) from live Render catalog rotation
+   - Live execution successfully retrieved next product (`prod_purifier_11`) from live Render catalog rotation
    - Generated factual caption via Groq (`openai/gpt-oss-120b`) without invented claims or discounts
-   - Synthesized product image via Pollinations FLUX (29.0 KB valid JPEG)
+   - Synthesized product image via Pollinations FLUX (59.0 KB valid JPEG)
    - Uploaded to Cloudinary with signed credentials (`califnco/daily-posts`)
    - Confirmed transformed 1:1 Instagram image URL returns HTTP 200 and `image/jpeg` via HEAD request
-   - Reported `NOT POSTED: Meta credentials missing (META_ACCESS_TOKEN, IG_USER_ID)` and exited with code 2
+   - Published live post via Instagram Graph API: Container `18084252779401221`, Media `18632766847061883`
+   - Verified live post online: `https://www.instagram.com/p/De5_i2yDSfK/`
 5. **Admin Web Portal Build (`npm run build` in `admin-web`)**:
    - Built cleanly with Vite in 4.24s with zero compilation or lint errors.
 
@@ -84,7 +86,6 @@ Command lines and real test suite results executed in this repository:
 
 ## 5. Known Limitations & Blocked Items
 
-- **Instagram Live Publishing**: Marked **BLOCKED**. The automation pipeline is fully implemented and tested through step 4 (Cloudinary upload and verified HEAD check). Live publication to an Instagram Feed requires the user's personal Meta Developer Account credentials (`META_ACCESS_TOKEN` with `instagram_content_publish` permission and `IG_USER_ID`). In the absence of these variables, `runDailyPost.js` outputs `NOT POSTED: Meta credentials missing (META_ACCESS_TOKEN, IG_USER_ID)` and exits with code 2 as specified in the assignment requirements.
 - **Push Notifications on Real Devices**: In Expo Go and local development, remote FCM push notifications are simulated via mock tokens without crashing. Receiving native background push banners on an Android device requires running the standalone built preview APK configured with `google-services.json`.
 - **Live Transactional Email & SMS Dispatch**: Marked **BLOCKED**. Real provider dispatches require user-supplied keys (`BREVO_API_KEY`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`, `TEST_EMAIL`, `TEST_PHONE`). The verification script `node server/scripts/testNotifications.js` exits non-zero and reports `BLOCKED` when these keys are not set. In server operations, notification dispatches run inside unawaited, non-blocking try-catch blocks; missing provider keys log payloads gracefully without causing transactions to fail.
 - **Render Server Free-Tier Cold Starts**: Render's free compute tier spins down inactive web services. An initial cold-start request can take 30 to 45 seconds to wake up the server. Both the mobile app checkout flow and the automation catalog fetch implement 45 to 60-second timeouts with retry logic to handle cold starts cleanly.

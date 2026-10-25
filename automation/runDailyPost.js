@@ -396,10 +396,14 @@ async function publishToInstagram(instagramImageUrl, caption) {
     process.exit(2);
   }
 
-  console.log(`[Step 5/5] Publishing post to Instagram Graph API (${graphVersion})...`);
+  const isIgToken = metaToken.startsWith('IGAA') || metaToken.startsWith('IGQ') || !metaToken.startsWith('EAA');
+  const apiHost = isIgToken ? 'https://graph.instagram.com' : 'https://graph.facebook.com';
+  const targetId = isIgToken ? 'me' : igUserId;
+
+  console.log(`[Step 5/5] Publishing post to Instagram Graph API (${apiHost}/${graphVersion})...`);
 
   // Step A: Create media container
-  const createMediaUrl = `https://graph.facebook.com/${graphVersion}/${igUserId}/media`;
+  const createMediaUrl = `${apiHost}/${graphVersion}/${targetId}/media`;
   const containerRes = await fetchWithTimeout(createMediaUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -408,7 +412,7 @@ async function publishToInstagram(instagramImageUrl, caption) {
       caption: caption,
       access_token: metaToken
     })
-  }, 20000);
+  }, 25000);
 
   const containerData = await containerRes.json();
   if (!containerRes.ok || !containerData.id) {
@@ -428,7 +432,7 @@ async function publishToInstagram(instagramImageUrl, caption) {
   while (Date.now() - startTime < 60000) {
     await new Promise(r => setTimeout(r, 3000));
     const statusRes = await fetchWithTimeout(
-      `https://graph.facebook.com/${graphVersion}/${containerId}?fields=status_code&access_token=${metaToken}`,
+      `${apiHost}/${graphVersion}/${containerId}?fields=status_code&access_token=${metaToken}`,
       {},
       10000
     );
@@ -449,7 +453,7 @@ async function publishToInstagram(instagramImageUrl, caption) {
   }
 
   // Step C: Publish media
-  const publishUrl = `https://graph.facebook.com/${graphVersion}/${igUserId}/media_publish`;
+  const publishUrl = `${apiHost}/${graphVersion}/${targetId}/media_publish`;
   const publishRes = await fetchWithTimeout(publishUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -457,7 +461,7 @@ async function publishToInstagram(instagramImageUrl, caption) {
       creation_id: containerId,
       access_token: metaToken
     })
-  }, 20000);
+  }, 25000);
 
   const publishData = await publishRes.json();
   if (!publishRes.ok || !publishData.id) {
@@ -471,7 +475,7 @@ async function publishToInstagram(instagramImageUrl, caption) {
 
   // Step D: Fetch permalink
   const permalinkRes = await fetchWithTimeout(
-    `https://graph.facebook.com/${graphVersion}/${mediaId}?fields=permalink&access_token=${metaToken}`,
+    `${apiHost}/${graphVersion}/${mediaId}?fields=permalink&access_token=${metaToken}`,
     {},
     10000
   );

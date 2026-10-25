@@ -483,13 +483,12 @@ None. All test suites passing cleanly with zero errors.
 - `node server/scripts/testServerSecurityAndIdempotency.js`: **28/28 PASSED** (token verification, idempotency duplicate handling, transactional stock rollback, cancelled/failed payment isolation).
 - `node server/scripts/verifyPhase3.js`: **31/31 PASSED** (price recomputation, tamper rejection, cancelled payment check, dealer bulk order).
 - `node server/scripts/deployRules.js`: **SUCCESS** (deployed ruleset cd32327e-42fb-448b-be06-de36b43a3825).
-- `node automation/runDailyPost.js`: **SUCCESSFUL REAL RUN** (fetched "AquaCompact Tabletop Portable RO" prod_purifier_09 from Render catalog, generated factual Groq caption via openai/gpt-oss-120b, synthesized image via Pollinations FLUX, uploaded signed image to Cloudinary, verified HTTP 200 HEAD check, logged `NOT POSTED: Meta credentials missing`).
+- `node automation/runDailyPost.js`: **SUCCESSFUL REAL RUN & LIVE PUBLISH** (fetched "BioMineral Zinc+Copper Wall RO Unit" `prod_purifier_11` from Render catalog, generated factual Groq caption via `openai/gpt-oss-120b`, synthesized image via Pollinations FLUX, uploaded signed image to Cloudinary `califnco/daily-posts`, verified HTTP 200 HEAD check, published live post via Instagram Graph API container `18084252779401221`, media `18632766847061883`, verified live post at `https://www.instagram.com/p/De5_i2yDSfK/`).
 - `node automation/runDailyPost.js --dry-run`: **SUCCESSFUL DRY RUN** (deterministic factual generation conforming to negative constraints).
 - `node server/scripts/testNotifications.js`: Tested and verified proper `BLOCKED` exit code when user credentials are not provided.
 - `npm run build` in `admin-web`: **SUCCESS** (built in 4.24s).
 
 **What is BLOCKED:**
-1. **Instagram Feed Publishing**: Blocked pending user's Meta Graph API credentials (`META_ACCESS_TOKEN` and `IG_USER_ID`).
-2. **Real Email & SMS Dispatch Test**: Blocked pending user's test targets and provider keys (`TEST_EMAIL`, `BREVO_API_KEY`, `TEST_PHONE`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`).
+1. **Real Email & SMS Dispatch Test**: Blocked pending user's test targets and provider keys (`TEST_EMAIL`, `BREVO_API_KEY`, `TEST_PHONE`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`). Non-blocking failure isolation verified on server.
 
 
