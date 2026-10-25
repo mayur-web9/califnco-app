@@ -725,6 +725,28 @@ app.get("/address/search", async (req, res) => {
 // 7. Automation Endpoint: Fetch next product in rotation & advance state
 app.get("/automation/next-product", async (req, res) => {
   try {
+    const specificId = req.query.productId || req.query.id;
+    if (specificId) {
+      const prodDoc = await db.collection("products").doc(specificId).get();
+      if (!prodDoc.exists) {
+        return res.status(404).json({ error: `Product ${specificId} not found in catalog` });
+      }
+      const prod = { id: prodDoc.id, ...prodDoc.data() };
+      return res.json({
+        success: true,
+        product: {
+          id: prod.id,
+          name: prod.name,
+          category: prod.category,
+          description: prod.description,
+          price: prod.price,
+          rating: prod.rating || 4.8,
+          imageUrl: prod.imageUrl
+        },
+        rotationAdvanced: false
+      });
+    }
+
     const stateRef = db.collection("automation").doc("state");
     const stateSnap = await stateRef.get();
     let lastPostedId = null;

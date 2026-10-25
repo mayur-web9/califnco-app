@@ -41,6 +41,22 @@ try {
 
 const isDryRun = process.argv.includes('--dry-run');
 
+// Parse CLI argument --product <id> or environment variable PRODUCT_ID
+function getRequestedProductId() {
+  const prodFlagIndex = process.argv.indexOf('--product');
+  if (prodFlagIndex !== -1 && process.argv[prodFlagIndex + 1] && !process.argv[prodFlagIndex + 1].startsWith('--')) {
+    return process.argv[prodFlagIndex + 1].trim();
+  }
+  const flagWithEqual = process.argv.find(arg => arg.startsWith('--product='));
+  if (flagWithEqual) {
+    return flagWithEqual.split('=')[1].trim();
+  }
+  if (process.env.PRODUCT_ID && process.env.PRODUCT_ID.trim()) {
+    return process.env.PRODUCT_ID.trim();
+  }
+  return null;
+}
+
 // Helper to make fetch with timeout
 async function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
   const controller = new AbortController();
@@ -55,11 +71,63 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
   }
 }
 
-// 1. Fetch next product from catalog rotation with 60s timeout and 3 retries
-async function fetchNextProduct() {
+// 1. Fetch product: either requested product override (skipping rotation) or next in catalog rotation
+async function fetchProduct(requestedId = null) {
   const serverUrl = process.env.SERVER_URL || process.env.BACKEND_URL || 'https://califnco-app.onrender.com';
-  let lastError = null;
 
+  if (requestedId) {
+    console.log(`[Step 1/5] Fetching requested product "${requestedId}" (rotation override)...`);
+
+    // Check direct Firestore if local firebaseAdmin is available
+    try {
+      let dbInstance = null;
+      try {
+        const adminMod = require(path.resolve(__dirname, '../server/firebaseAdmin'));
+        dbInstance = adminMod.db;
+      } catch (e) {
+        try {
+          const adminMod = require(path.resolve(__dirname, 'server/firebaseAdmin'));
+          dbInstance = adminMod.db;
+        } catch (err) {}
+      }
+
+      if (dbInstance) {
+        const doc = await dbInstance.collection('products').doc(requestedId).get();
+        if (doc.exists) {
+          const prod = { id: doc.id, ...doc.data() };
+          console.log(`  Product retrieved directly from catalog: "${prod.name}" (${prod.id})`);
+          console.log(`  Category: ${prod.category} | Price: Rs. ${prod.price}`);
+          console.log(`  Catalog rotation state NOT advanced (single-product manual override).`);
+          return prod;
+        }
+      }
+    } catch (directErr) {
+      // Continue to API fetch
+    }
+
+    // Try server endpoint with query parameter
+    try {
+      const res = await fetchWithTimeout(`${serverUrl}/automation/next-product?productId=${encodeURIComponent(requestedId)}`, {
+        headers: { 'User-Agent': 'Califnco-Automation/1.0' }
+      }, 30000);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.product) {
+          console.log(`  Product retrieved from server: "${data.product.name}" (${data.product.id})`);
+          console.log(`  Category: ${data.product.category} | Price: Rs. ${data.product.price}`);
+          console.log(`  Catalog rotation state NOT advanced (single-product manual override).`);
+          return data.product;
+        }
+      }
+    } catch (err) {
+      console.warn(`  Server endpoint fetch failed: ${err.message}`);
+    }
+
+    console.error(`FATAL: Could not find requested product "${requestedId}" in catalog.`);
+    process.exit(1);
+  }
+
+  let lastError = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     console.log(`[Step 1/5] Fetching next product from ${serverUrl}/automation/next-product (attempt ${attempt}/3)...`);
     try {
@@ -347,10 +415,10 @@ async function generateProductImage(product) {
     dummyBuffer[1] = 0x50;
     dummyBuffer[2] = 0x4E;
     dummyBuffer[3] = 0x47;
-    console.log('  Image provider used: Hugging Face FLUX.1-schnell (dry-run simulation)');
+    console.log('  Image provider used: Hugging Face FLUX (dry-run simulation)');
     return {
       buffer: dummyBuffer,
-      provider: 'Hugging Face FLUX.1-schnell (dry-run simulation)'
+      provider: 'Hugging Face FLUX'
     };
   }
 
@@ -377,8 +445,8 @@ async function generateProductImage(product) {
           const arrayBuf = await hfRes.arrayBuffer();
           const buffer = Buffer.from(arrayBuf);
           if (validateImageBuffer(buffer)) {
-            console.log(`  Image provider used: Hugging Face FLUX.1-schnell (${(buffer.length / 1024).toFixed(1)} KB)`);
-            return { buffer, provider: 'Hugging Face FLUX.1-schnell' };
+            console.log(`  Image provider used: Hugging Face FLUX (${(buffer.length / 1024).toFixed(1)} KB)`);
+            return { buffer, provider: 'Hugging Face FLUX' };
           }
         } else {
           console.warn(`  Hugging Face endpoint (${endpoint}) returned HTTP ${hfRes.status}.`);
@@ -412,10 +480,25 @@ async function generateProductImage(product) {
       throw new Error(`Generated buffer failed validation (size: ${buffer.length} bytes; must be JPEG/PNG >= 30KB)`);
     }
 
-    console.log(`  Image provider used: Pollinations FLUX (${(buffer.length / 1024).toFixed(1)} KB)`);
-    return { buffer, provider: 'Pollinations FLUX' };
+    console.log(`  Image provider used: Pollinations (${(buffer.length / 1024).toFixed(1)} KB)`);
+    return { buffer, provider: 'Pollinations' };
   } catch (err) {
-    console.error(`FATAL: All image generation providers failed (${err.message}). Never substituting catalog photo.`);
+    console.warn(`  Pollinations generation failed (${err.message}). Checking catalog photo fallback...`);
+    if (product.imageUrl) {
+      try {
+        const catRes = await fetchWithTimeout(product.imageUrl, {}, 25000);
+        if (catRes.ok) {
+          const catBuf = Buffer.from(await catRes.arrayBuffer());
+          if (validateImageBuffer(catBuf)) {
+            console.log(`  Image provider used: catalog photo (${(catBuf.length / 1024).toFixed(1)} KB)`);
+            return { buffer: catBuf, provider: 'catalog photo' };
+          }
+        }
+      } catch (catErr) {
+        console.warn(`  Catalog photo fetch failed: ${catErr.message}`);
+      }
+    }
+    console.error(`FATAL: All image generation providers failed (${err.message}) and catalog photo unavailable.`);
     process.exit(1);
   }
 }
@@ -654,8 +737,9 @@ async function main() {
   console.log('         CALIFNCO DAILY SOCIAL POST AUTOMATION ENGINE');
   console.log('======================================================================\n');
 
-  // Step 1: Catalog rotation
-  const product = await fetchNextProduct();
+  // Step 1: Catalog rotation or requested product override
+  const requestedId = getRequestedProductId();
+  const product = await fetchProduct(requestedId);
 
   // Step 2: Groq caption generation
   console.log('\n[Step 2/5] Generating factual caption via Groq...');
@@ -680,11 +764,22 @@ async function main() {
   console.log('\n[Step 5/5] Meta Instagram Publishing:');
   const metaPost = await publishToInstagram(instagramImageUrl, caption);
 
+  let imageSource = 'Hugging Face FLUX';
+  if (provider.includes('Hugging Face')) {
+    imageSource = 'Hugging Face FLUX';
+  } else if (provider.includes('Pollinations')) {
+    imageSource = 'Pollinations';
+  } else if (provider.includes('catalog')) {
+    imageSource = 'catalog photo';
+  } else {
+    imageSource = provider;
+  }
+
   console.log('\n======================================================================');
   console.log('         DAILY POST PIPELINE COMPLETED SUCCESSFULLY');
   console.log(`  Product:      ${product.name} (${product.id})`);
   console.log(`  Copy Model:   ${modelUsed}`);
-  console.log(`  Image Engine: ${provider}`);
+  console.log(`  Image Source: ${imageSource}`);
   console.log(`  Cloudinary:   ${secureUrl}`);
   console.log(`  Instagram:    ${metaPost ? metaPost.permalink : 'NOT POSTED'}`);
   console.log('======================================================================');
