@@ -13,11 +13,11 @@ Submission Date: 25 October 2026
 | Deliverable | URL / Path | Notes |
 | :--- | :--- | :--- |
 | **GitHub Repository** | `https://github.com/mayur-web9/califnco-app` | Verified on `main` branch |
-| **Admin Web Portal** | `https://califnco-app-phi.vercel.app` | Hosted on Vercel |
+| **Working Video Demonstration** | `[Insert Google Drive / Loom Link Here]` | End-to-end walkthrough (Customer, Dealer, Admin, Automation) |
+| **Standalone Android APK** | [Download APK](https://expo.dev/artifacts/eas/0CE54Nq4YFMHztXnvg6rSMadDKrIyU8INncF5MAhn7s.apk) | Build ID: `8ab46fe7` via EAS Cloud (Ready to install) |
+| **Admin Web Portal** | `https://califnco-app-phi.vercel.app` | Hosted on Vercel (Admin credentials below) |
 | **Backend REST API** | `https://califnco-app.onrender.com` | Health endpoint: `https://califnco-app.onrender.com/health` |
-| **Standalone Android APK** | [Download APK](https://expo.dev/artifacts/eas/0CE54Nq4YFMHztXnvg6rSMadDKrIyU8INncF5MAhn7s.apk) | Build ID: `8ab46fe7` via EAS Cloud |
-| **Live Instagram Daily Post** | `https://www.instagram.com/p/De6Czs2jY42/` | Published live via Instagram Graph API |
-| **Clean ZIP Submission Archive** | `califnco-submission-clean.zip` | Root directory (zero secrets, zero node_modules) |
+| **Live Instagram Daily Post** | `https://www.instagram.com/p/De6NjyZDfoX/` | Published live via Meta Graph API & Pollinations FLUX |
 | **Automation Workflow (n8n)** | `automation/workflow.json` | 1-click importable workflow file |
 | **GitHub Actions Workflow** | `.github/workflows/daily-post.yml` | Scheduled daily at 10:00 AM IST (04:30 UTC) |
 
