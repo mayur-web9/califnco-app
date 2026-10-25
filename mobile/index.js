@@ -7,6 +7,7 @@ LogBox.ignoreLogs([
   "[expo-notifications]",
   "`expo-notifications` functionality is not fully supported in Expo Go",
   "VirtualizedList: You have a large list that is slow to update",
+  "Failed to get document because the client is offline",
 ]);
 
 // Safeguard against unhandled native promise rejections (e.g. SDK notifications in Expo Go)
