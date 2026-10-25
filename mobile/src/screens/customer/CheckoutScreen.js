@@ -544,7 +544,8 @@ export default function CheckoutScreen({ navigation }) {
         secondaryBtnText="View All Orders"
         onSecondaryPress={() => {
           setSuccessModalVisible(false);
-          navigation.navigate("Orders");
+          const target = (profile?.role || "").toLowerCase() === "dealer" ? "DealerOrders" : "Orders";
+          navigation.navigate(target);
         }}
         iconName="check-circle"
         iconColor="#10b981"
@@ -555,7 +556,8 @@ export default function CheckoutScreen({ navigation }) {
         visible={invoiceModalVisible}
         onClose={() => {
           setInvoiceModalVisible(false);
-          navigation.navigate("Orders");
+          const target = (profile?.role || "").toLowerCase() === "dealer" ? "DealerOrders" : "Orders";
+          navigation.navigate(target);
         }}
         order={confirmedOrder}
       />

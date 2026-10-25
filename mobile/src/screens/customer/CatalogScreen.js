@@ -70,7 +70,10 @@ export default function CatalogScreen({ navigation }) {
         <View style={s.topBarActions}>
           <TouchableOpacity
             style={s.topBarIconBtn}
-            onPress={() => navigation.navigate("Orders")}
+            onPress={() => {
+              const role = (profile?.role || "").toLowerCase();
+              navigation.navigate(role === "admin" ? "AdminOrders" : role === "dealer" ? "DealerOrders" : "Orders");
+            }}
             activeOpacity={0.8}
             accessibilityLabel="Notifications"
           >
@@ -135,7 +138,10 @@ export default function CatalogScreen({ navigation }) {
 
         <TouchableOpacity
           style={s.quickNavItem}
-          onPress={() => navigation.navigate("Orders")}
+          onPress={() => {
+            const role = (profile?.role || "").toLowerCase();
+            navigation.navigate(role === "admin" ? "AdminOrders" : role === "dealer" ? "DealerOrders" : "Orders");
+          }}
           activeOpacity={0.8}
         >
           <View style={[s.quickNavCircle, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
