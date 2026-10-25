@@ -146,6 +146,38 @@ function stripMarkdown(text) {
     .trim();
 }
 
+// Sanitize caption to strictly enforce factual numeric constraints
+function sanitizeCaption(text, product) {
+  let cleaned = stripMarkdown(text);
+  const allowedDocText = `${product.name || ''} ${product.description || ''} ${product.price || ''} ${product.category || ''}`;
+
+  // Strip unauthorized percentage or removal claims not present in product document
+  const sentences = cleaned.split(/(?<=[.!?\n])\s+/);
+  const filteredSentences = sentences.map(sentence => {
+    // Check if sentence has a percentage (e.g., 99.9%, 100%)
+    const pctMatches = sentence.match(/\b\d+(\.\d+)?%/g) || [];
+    for (const pct of pctMatches) {
+      if (!allowedDocText.includes(pct)) {
+        return ''; // Remove hallucinated percentage claim
+      }
+    }
+    // Check for "removes X" or "eliminates X" style claims
+    if (/removes?\s+\d+/i.test(sentence) && !/removes?\s+\d+/i.test(allowedDocText)) {
+      return '';
+    }
+    return sentence;
+  }).filter(Boolean);
+
+  cleaned = filteredSentences.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+
+  // Ensure exactly one Califnco app CTA is present
+  if (!/califnco\s+app/i.test(cleaned)) {
+    cleaned += '\n\nDiscover more and order on the Califnco app.';
+  }
+
+  return cleaned.slice(0, 2000);
+}
+
 // Generate compliant caption via Groq or deterministic dry-run generator
 async function generateCaption(product) {
   if (isDryRun) {
@@ -173,16 +205,20 @@ async function generateCaption(product) {
 
   const { selectedModel } = await selectGroqModel(groqApiKey);
 
-  const systemPrompt = `You are a copywriter for Califnco. Write an Instagram caption based STRICTLY on the facts in the product document provided.
-STRICT NEGATIVE CONSTRAINTS:
-- Do NOT invent discounts, "festive offers", sales, or percentage-off claims.
+  const systemPrompt = `You are an exact, factual copywriter for Califnco water systems.
+Write an Instagram caption based STRICTLY on the facts in the product document provided.
+
+MANDATORY CONSTRAINTS:
+- ONLY use facts present in the product document.
+- STRICT NUMERIC CONSTRAINT: Forbid ANY numeric claim (percentages, litres per hour, stage counts, years) unless that exact number appears in the product fields.
+- Remove all "removes X% of ..." or "kills 99% of ..." style claims unless the number is in the data.
+- Do NOT invent discounts, offers, or sales.
 - Do NOT make delivery or installation promises.
-- Do NOT make medical, cure, or unverified health claims.
-- Output MUST be 2 to 4 short lines of factual product details.
+- Output MUST have 2 to 4 short lines of factual product details.
 - Include exactly ONE call to action mentioning the Califnco app.
-- Conclude with 5 to 8 relevant hashtags at the end.
-- Do NOT use markdown: NO bold (**), NO italics (*), NO headings (#), NO backticks.
-- Maximum length 2000 characters.`;
+- Conclude with 5 to 8 relevant hashtags.
+- Do NOT use markdown: NO bold (**), NO italics (*), NO headings (#), NO backticks. Plain text only.
+- Maximum length 1000 characters.`;
 
   const userPrompt = `Product Name: ${product.name}
 Category: ${product.category}
@@ -201,7 +237,7 @@ Specs / Description: ${product.description || 'Domestic water purification unit'
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.5
+      temperature: 0.3
     })
   }, 30000);
 
@@ -216,7 +252,7 @@ Specs / Description: ${product.description || 'Domestic water purification unit'
     throw new Error('Groq returned empty caption completion');
   }
 
-  const cleanCaption = stripMarkdown(rawCaption).slice(0, 2000);
+  const cleanCaption = sanitizeCaption(rawCaption, product);
   return {
     caption: cleanCaption,
     modelUsed: selectedModel
