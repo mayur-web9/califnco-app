@@ -89,9 +89,21 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 };
 
+// Cloudinary configuration
+const cloudinary = require("cloudinary").v2;
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+  });
+}
+
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ limit: "25mb", extended: true }));
 app.use("/public", express.static(path.join(__dirname, "public")));
 
 // Rate-limited routes
@@ -151,6 +163,108 @@ app.get("/health", (req, res) => {
     uptime: Math.round(process.uptime()),
     timestamp: new Date().toISOString()
   });
+});
+
+// Cloudinary Direct Image Upload Endpoint
+app.post("/upload/image", async (req, res) => {
+  try {
+    const { image, folder, public_id } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: "Missing image data (base64 string or remote URL required)." });
+    }
+
+    const uploadOptions = {
+      folder: folder || "califnco/products",
+      resource_type: "image",
+      overwrite: true,
+    };
+    if (public_id) {
+      uploadOptions.public_id = public_id;
+    }
+
+    const result = await cloudinary.uploader.upload(image, uploadOptions);
+    return res.json({
+      success: true,
+      url: result.secure_url,
+      public_id: result.public_id,
+      format: result.format,
+      width: result.width,
+      height: result.height,
+    });
+  } catch (err) {
+    console.error("Cloudinary upload failed:", err);
+    return res.status(500).json({ error: "Cloudinary upload failed: " + err.message });
+  }
+});
+
+// Google Auth Endpoint: Exchanges Google profile for custom token & ensures Firestore user document
+app.post("/auth/google", async (req, res) => {
+  try {
+    const { email, name, role = "Customer", photoUrl } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Missing required email for Google authentication" });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name?.trim() || cleanEmail.split("@")[0] || "Califnco Customer";
+
+    let userRecord;
+    try {
+      userRecord = await admin.auth().getUserByEmail(cleanEmail);
+    } catch (err) {
+      if (err.code === "auth/user-not-found") {
+        userRecord = await admin.auth().createUser({
+          email: cleanEmail,
+          displayName: cleanName,
+          photoURL: photoUrl || "",
+          emailVerified: true
+        });
+      } else {
+        throw err;
+      }
+    }
+
+    const uid = userRecord.uid;
+    const userDocRef = db.collection("users").doc(uid);
+    const userDoc = await userDocRef.get();
+
+    let profileData;
+    if (!userDoc.exists) {
+      profileData = {
+        uid,
+        email: cleanEmail,
+        name: cleanName,
+        phone: "",
+        role: role || "Customer",
+        dealerStatus: role === "Dealer" ? "pending" : null,
+        provider: "google",
+        photoUrl: photoUrl || "",
+        address: { line1: "", city: "", state: "", pincode: "" },
+        fcmToken: "",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+      await userDocRef.set(profileData);
+    } else {
+      profileData = userDoc.data();
+      if (!profileData.provider) {
+        await userDocRef.update({ provider: "google" });
+      }
+    }
+
+    // Generate Firebase Custom Token
+    const customToken = await admin.auth().createCustomToken(uid, {
+      role: profileData.role || "Customer"
+    });
+
+    return res.json({
+      success: true,
+      customToken,
+      profile: { uid, ...profileData }
+    });
+  } catch (err) {
+    console.error("Google Auth error:", err);
+    return res.status(500).json({ error: "Google authentication failed: " + err.message });
+  }
 });
 
 // 2. Retail Payment: Create Razorpay Order with SERVER-SIDE PRICE RECOMPUTATION

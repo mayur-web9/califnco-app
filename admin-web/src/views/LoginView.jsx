@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
 
@@ -35,6 +35,28 @@ export default function LoginView({ onLoginSuccess }) {
       onLoginSuccess({ uid, ...userSnap.data() });
     } catch (err) {
       setError(err.message || "Login failed. Please check credentials.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setLoading(true);
+    setError("");
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      const uid = res.user.uid;
+      const userSnap = await getDoc(doc(db, "users", uid));
+      if (!userSnap.exists() || userSnap.data()?.role !== "Admin") {
+        await signOut(auth);
+        setError("Access Denied: Only Califnco executive administrators may access this portal.");
+        setLoading(false);
+        return;
+      }
+      onLoginSuccess({ uid, ...userSnap.data() });
+    } catch (err) {
+      setError(err.message || "Google sign-in failed.");
     } finally {
       setLoading(false);
     }
@@ -101,6 +123,33 @@ export default function LoginView({ onLoginSuccess }) {
 
           <button type="submit" className="btn-pill-primary" style={{ width: "100%", height: "48px" }} disabled={loading}>
             {loading ? "Authenticating..." : "Login"}
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", margin: "18px 0 14px", color: "var(--text-muted)", fontSize: "12px" }}>
+            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+            <span style={{ padding: "0 10px" }}>or continue with</span>
+            <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="btn btn-secondary"
+            style={{
+              width: "100%",
+              height: "46px",
+              borderRadius: "24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              fontWeight: 600,
+              fontSize: "14px"
+            }}
+          >
+            <span style={{ fontSize: "16px", fontWeight: "900", color: "#ea4335" }}>G</span>
+            Sign In with Google
           </button>
         </form>
       </div>

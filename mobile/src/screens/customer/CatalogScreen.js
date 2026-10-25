@@ -167,29 +167,7 @@ export default function CatalogScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* 4. Promo Section: "Premium RO Purifiers" (Screen 7) */}
-      <View style={[s.promoCard, { backgroundColor: isDark ? theme.card : "#f8fafc", borderColor: isDark ? theme.border : "#e2e8f0" }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={[s.promoTitle, { color: theme.text }]}>Premium RO Purifiers</Text>
-          <Text style={[s.promoDesc, { color: theme.textSecondary }]}>
-            Pure, safe and mineral-rich water for your family.
-          </Text>
-          <TouchableOpacity
-            style={s.promoBtn}
-            onPress={() => setActiveCategory("RO Purifiers")}
-            activeOpacity={0.85}
-          >
-            <Text style={s.promoBtnText}>Shop Now</Text>
-          </TouchableOpacity>
-        </View>
-        <Image
-          source={{ uri: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&auto=format&fit=crop&q=80" }}
-          style={s.promoImg}
-          resizeMode="cover"
-        />
-      </View>
-
-      {/* 5. Search Bar & Filter (Screen 8) */}
+      {/* Search Bar & Filter (Screen 8) */}
       <View style={[s.searchWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <MaterialIcons name="search" size={22} color={colors.textMuted} style={s.searchIcon} />
         <TextInput

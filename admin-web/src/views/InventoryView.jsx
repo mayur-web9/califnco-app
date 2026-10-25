@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { doc, updateDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { uploadImageToCloudinary } from "../services/cloudinaryService";
 
 export default function InventoryView({ products, onRefresh }) {
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -9,6 +10,7 @@ export default function InventoryView({ products, onRefresh }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // New product form state
   const [form, setForm] = useState({
@@ -22,6 +24,23 @@ export default function InventoryView({ products, onRefresh }) {
     description: "",
     imageUrl: ""
   });
+
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const url = await uploadImageToCloudinary(file, "califnco/products");
+      setForm(prev => ({ ...prev, imageUrl: url }));
+    } catch (err) {
+      console.error("Cloudinary upload failed:", err);
+      alert("Failed to upload image to Cloudinary: " + (err.message || err));
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
+  }
 
   const categories = ["all", "Purifier", "Dispenser", "Pump", "Filter", "Spare", "Accessory"];
 
@@ -467,13 +486,73 @@ export default function InventoryView({ products, onRefresh }) {
                 </div>
 
                 <div className="form-group" style={{ gridColumn: "span 2" }}>
-                  <label className="form-label">Image URL</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Product Image</label>
+                    <label
+                      className="btn btn-secondary"
+                      style={{
+                        padding: "4px 12px",
+                        fontSize: "12px",
+                        cursor: uploadingImage ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        margin: 0
+                      }}
+                    >
+                      <span>☁️</span>
+                      {uploadingImage ? "Uploading to Cloudinary..." : "Upload Image to Cloudinary"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        disabled={uploadingImage}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                  </div>
+
+                  {form.imageUrl && (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "8px 12px",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                      marginBottom: "8px"
+                    }}>
+                      <img
+                        src={form.imageUrl}
+                        alt="Preview"
+                        style={{ width: "42px", height: "42px", objectFit: "cover", borderRadius: "6px" }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "11px", color: "var(--accent)", fontWeight: 600 }}>
+                          {form.imageUrl.includes("cloudinary.com") ? "Cloudinary Hosted Image" : "Attached Image"}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {form.imageUrl}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, imageUrl: "" })}
+                        style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: "14px" }}
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
                   <input
                     type="url"
                     className="form-input"
                     value={form.imageUrl}
                     onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                    placeholder="https://..."
+                    placeholder="Or paste image URL (https://...)"
                   />
                 </div>
 

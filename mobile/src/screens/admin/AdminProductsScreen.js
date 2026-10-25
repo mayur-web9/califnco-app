@@ -4,11 +4,13 @@ import {
   Image, Modal, ScrollView, Alert, ActivityIndicator, RefreshControl
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import {
   collection, getDocs, doc, setDoc, updateDoc, deleteDoc, serverTimestamp
 } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import { useTheme } from "../../hooks/useTheme";
+import { uploadImageToCloudinary } from "../../services/cloudinaryService";
 
 const CATEGORIES = ["All", "Purifier", "Dispenser", "Pump", "Filter", "Spare"];
 
@@ -25,6 +27,7 @@ export default function AdminProductsScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Form Fields
   const [formId, setFormId] = useState("");
@@ -36,6 +39,37 @@ export default function AdminProductsScreen({ navigation }) {
   const [formStock, setFormStock] = useState("20");
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formDescription, setFormDescription] = useState("");
+
+  const handlePickAndUploadImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Needed", "Please allow access to your photos to upload product images.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+        base64: true
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setUploadingImage(true);
+        const imagePayload = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        const uploadedUrl = await uploadImageToCloudinary(imagePayload, "califnco/products");
+        setFormImageUrl(uploadedUrl);
+        Alert.alert("Image Uploaded", "Product image successfully uploaded to Cloudinary!");
+      }
+    } catch (err) {
+      console.error("Cloudinary upload error:", err);
+      Alert.alert("Upload Failed", err.message || "Failed to upload image to Cloudinary.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const loadProducts = async () => {
     try {
@@ -485,14 +519,59 @@ export default function AdminProductsScreen({ navigation }) {
                 </View>
               </View>
 
-              <Text style={[styles.formLabel, { color: theme.text, marginTop: 12 }]}>Image URL</Text>
-              <TextInput
-                style={[styles.formInput, { color: theme.text, borderColor: theme.border, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f8fafc" }]}
-                value={formImageUrl}
-                onChangeText={setFormImageUrl}
-                placeholder="https://..."
-                placeholderTextColor={theme.textMuted}
-              />
+              {/* Product Image & Cloudinary Upload */}
+              <View style={{ marginTop: 14 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <Text style={[styles.formLabel, { color: theme.text, marginTop: 0 }]}>Product Image</Text>
+                  <TouchableOpacity
+                    style={[styles.uploadCloudBtn, uploadingImage && { opacity: 0.6 }]}
+                    onPress={handlePickAndUploadImage}
+                    disabled={uploadingImage}
+                    activeOpacity={0.8}
+                  >
+                    {uploadingImage ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <>
+                        <MaterialIcons name="cloud-upload" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                        <Text style={styles.uploadCloudBtnText}>Upload to Cloudinary</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {formImageUrl ? (
+                  <View style={[styles.imagePreviewWrap, { borderColor: theme.border, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f8fafc" }]}>
+                    <Image source={{ uri: formImageUrl }} style={styles.imagePreviewThumb} resizeMode="cover" />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                        <MaterialIcons name="cloud-done" size={14} color="#10b981" />
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: "#10b981", marginLeft: 4 }}>
+                          {formImageUrl.includes("cloudinary.com") ? "Cloudinary Hosted" : "Image Attached"}
+                        </Text>
+                      </View>
+                      <Text style={[styles.imagePreviewUrl, { color: theme.textMuted }]} numberOfLines={1}>
+                        {formImageUrl}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setFormImageUrl("")}
+                      style={{ padding: 6 }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <MaterialIcons name="close" size={18} color="#dc2626" />
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+
+                <TextInput
+                  style={[styles.formInput, { color: theme.text, borderColor: theme.border, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f8fafc", marginTop: 6 }]}
+                  value={formImageUrl}
+                  onChangeText={setFormImageUrl}
+                  placeholder="Or paste image URL (https://...)"
+                  placeholderTextColor={theme.textMuted}
+                />
+              </View>
 
               <Text style={[styles.formLabel, { color: theme.text, marginTop: 12 }]}>Specifications & Description</Text>
               <TextInput
@@ -870,5 +949,34 @@ const styles = StyleSheet.create({
   saveModalBtnText: {
     fontSize: 14,
     fontWeight: "800"
+  },
+  uploadCloudBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#00b4d8",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8
+  },
+  uploadCloudBtnText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  imagePreviewWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 8
+  },
+  imagePreviewThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8
+  },
+  imagePreviewUrl: {
+    fontSize: 11
   }
 });

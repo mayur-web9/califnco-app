@@ -10,6 +10,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import { logout } from "../../services/authService";
 import Skeleton from "../../components/Skeleton";
+import colors from "../../constants/colors";
 
 export default function ProfileScreen({ navigation }) {
   const { profile, refreshProfile } = useAuth();

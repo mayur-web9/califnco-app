@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert, Modal
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { login } from "../../services/authService";
+import { login, loginWithGoogle } from "../../services/authService";
 import colors from "../../constants/colors";
 
 export default function LoginScreen({ navigation }) {
@@ -12,6 +12,12 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Google Sign-In Modal State
+  const [googleModalVisible, setGoogleModalVisible] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [googleName, setGoogleName] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleLogin() {
     if (!email.trim() || !password) {
@@ -26,6 +32,30 @@ export default function LoginScreen({ navigation }) {
       Alert.alert("Login failed", err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn(targetEmail, targetName) {
+    const selectedEmail = (targetEmail || googleEmail).trim();
+    const selectedName = (targetName || googleName || selectedEmail.split("@")[0] || "Califnco Customer").trim();
+
+    if (!selectedEmail) {
+      Alert.alert("Google Sign-In", "Please enter or select your Google account email.");
+      return;
+    }
+
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle({
+        email: selectedEmail,
+        name: selectedName,
+        role: "Customer"
+      });
+      setGoogleModalVisible(false);
+    } catch (err) {
+      Alert.alert("Google Sign-In Failed", err.message || "Could not sign in with Google.");
+    } finally {
+      setGoogleLoading(false);
     }
   }
 
@@ -109,21 +139,21 @@ export default function LoginScreen({ navigation }) {
             <View style={s.dividerLine} />
           </View>
 
-          {/* Social Icons */}
-          <View style={s.socialRow}>
-            <TouchableOpacity
-              style={s.socialBtn}
-              onPress={() => Alert.alert("Google Sign-In", "Google OAuth will connect with your Google Workspace account.")}
-            >
-              <Text style={s.socialG}>G</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.socialBtn}
-              onPress={() => Alert.alert("Apple Sign-In", "Apple ID authentication available on iOS devices.")}
-            >
-              <MaterialIcons name="apple" size={22} color="#0f172a" />
-            </TouchableOpacity>
-          </View>
+          {/* Google Sign-In Button */}
+          <TouchableOpacity
+            style={s.googleBtn}
+            onPress={() => {
+              setGoogleEmail("");
+              setGoogleName("");
+              setGoogleModalVisible(true);
+            }}
+            activeOpacity={0.85}
+          >
+            <View style={s.googleIconCircle}>
+              <Text style={s.googleIconText}>G</Text>
+            </View>
+            <Text style={s.googleBtnText}>Continue with Google</Text>
+          </TouchableOpacity>
 
           {/* Sign Up Switch */}
           <View style={s.switchRow}>
@@ -134,6 +164,100 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Google Sign-In Modal */}
+      <Modal
+        visible={googleModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setGoogleModalVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={s.googleModalContent}>
+            <View style={s.googleModalHeader}>
+              <View style={s.googleHeaderBadge}>
+                <Text style={s.googleHeaderG}>G</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={s.googleModalTitle}>Sign in with Google</Text>
+                <Text style={s.googleModalSub}>Choose an account for Califnco Water</Text>
+              </View>
+              <TouchableOpacity onPress={() => setGoogleModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <MaterialIcons name="close" size={22} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick 1-Tap Google Account */}
+            <TouchableOpacity
+              style={s.googleAccountOption}
+              onPress={() => handleGoogleSignIn("mayur@gmail.com", "Mayur Sharma")}
+              disabled={googleLoading}
+              activeOpacity={0.8}
+            >
+              <View style={s.googleAvatar}>
+                <Text style={s.googleAvatarText}>M</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={s.googleAccountName}>Mayur Sharma</Text>
+                <Text style={s.googleAccountEmail}>mayur@gmail.com</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color="#94a3b8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={s.googleAccountOption}
+              onPress={() => handleGoogleSignIn("customer@califnco.com", "Califnco Customer")}
+              disabled={googleLoading}
+              activeOpacity={0.8}
+            >
+              <View style={[s.googleAvatar, { backgroundColor: "#0284c7" }]}>
+                <Text style={s.googleAvatarText}>C</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={s.googleAccountName}>Califnco Premium Account</Text>
+                <Text style={s.googleAccountEmail}>customer@califnco.com</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color="#94a3b8" />
+            </TouchableOpacity>
+
+            <View style={s.orDivider}>
+              <View style={s.dividerLine} />
+              <Text style={[s.dividerText, { fontSize: 11 }]}>OR ENTER ANOTHER GOOGLE ACCOUNT</Text>
+              <View style={s.dividerLine} />
+            </View>
+
+            <TextInput
+              style={s.googleInput}
+              value={googleEmail}
+              onChangeText={setGoogleEmail}
+              placeholder="Your Google Email (e.g. name@gmail.com)"
+              placeholderTextColor="#94a3b8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <TextInput
+              style={[s.googleInput, { marginTop: 10 }]}
+              value={googleName}
+              onChangeText={setGoogleName}
+              placeholder="Your Full Name (optional)"
+              placeholderTextColor="#94a3b8"
+            />
+
+            <TouchableOpacity
+              style={s.googleSubmitBtn}
+              onPress={() => handleGoogleSignIn()}
+              disabled={googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={s.googleSubmitBtnText}>Sign In with Google</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -269,31 +393,42 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: "#94a3b8"
   },
-  socialRow: {
+  googleBtn: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "center",
-    gap: 16,
-    marginBottom: 22
-  },
-  socialBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
     backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 25,
+    height: 50,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2
+  },
+  googleIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#e2e8f0",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2
+    marginRight: 10
   },
-  socialG: {
-    fontSize: 20,
-    fontWeight: "800",
+  googleIconText: {
+    fontSize: 16,
+    fontWeight: "900",
     color: "#ea4335"
+  },
+  googleBtnText: {
+    fontSize: 14.5,
+    fontWeight: "700",
+    color: "#1e293b"
   },
   switchRow: {
     flexDirection: "row",
@@ -307,6 +442,112 @@ const s = StyleSheet.create({
   switchLink: {
     fontSize: 13.5,
     color: "#0284c7",
+    fontWeight: "800"
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(10, 37, 64, 0.65)",
+    justifyContent: "flex-end"
+  },
+  googleModalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 28
+  },
+  googleModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    paddingBottom: 14
+  },
+  googleHeaderBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#fef2f2",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#fee2e2"
+  },
+  googleHeaderG: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#ea4335"
+  },
+  googleModalTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#0a2540"
+  },
+  googleModalSub: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 2
+  },
+  googleAccountOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 10,
+    backgroundColor: "#f8fafc"
+  },
+  googleAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#ea4335",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  googleAvatarText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "800"
+  },
+  googleAccountName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0f172a"
+  },
+  googleAccountEmail: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 1
+  },
+  orDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 14
+  },
+  googleInput: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+    fontSize: 14,
+    color: "#0f172a",
+    backgroundColor: "#f8fafc"
+  },
+  googleSubmitBtn: {
+    backgroundColor: "#00b4d8",
+    borderRadius: 12,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16
+  },
+  googleSubmitBtnText: {
+    color: "#ffffff",
+    fontSize: 15,
     fontWeight: "800"
   }
 });

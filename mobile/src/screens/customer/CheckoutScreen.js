@@ -285,12 +285,8 @@ export default function CheckoutScreen({ navigation }) {
             <button class="btn" onclick="openRazorpay()">💳 Pay with Razorpay Gateway</button>
             <button class="btn btn-cancel" onclick="cancelCheckout()">Cancel and Return</button>
             
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-top: 14px; text-align: left; font-size: 11px; color: #475569; line-height: 16px;">
-              <strong style="color: #0f172a;">🧪 Razorpay Sandbox Instructions:</strong><br/>
-              • <strong>Test Card (Recommended):</strong> <code>4111 1111 1111 1111</code><br/>
-              • <strong>Exp:</strong> <code>12/30</code> | <strong>CVV:</strong> <code>123</code> | <strong>OTP:</strong> <code>123456</code><br/>
-              • <strong>Test UPI ID:</strong> <code>success@razorpay</code><br/>
-              <span style="color: #dc2626; font-size: 10px;">⚠️ Notice: Real UPI apps (Google Pay, PhonePe) reject sandbox QR codes because banking networks only process live merchant VPAs.</span>
+            <div class="hint" style="margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>🔒 256-Bit SSL Encrypted • PCI-DSS Certified</span>
             </div>
           </div>
 
@@ -454,11 +450,10 @@ export default function CheckoutScreen({ navigation }) {
           </View>
         </TouchableOpacity>
 
-        {/* Sandbox info badge */}
-        <View style={s.testInfoBox}>
-          <Text style={s.testInfoTitle}>🧪 Sandbox Testing Credentials</Text>
-          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test Card:</Text> 4111 1111 1111 1111 (Exp: 12/30, CVV: 123)</Text>
-          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test UPI ID:</Text> success@razorpay</Text>
+        {/* Security badge */}
+        <View style={s.securityBadge}>
+          <MaterialIcons name="verified-user" size={16} color="#10b981" />
+          <Text style={s.securityBadgeText}>100% Secure & Encrypted Razorpay Checkout</Text>
         </View>
       </View>
 
@@ -632,9 +627,18 @@ const s = StyleSheet.create({
   },
   payMethodLabel: { fontSize: 14, fontWeight: "700", color: colors.text },
   payMethodSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  testInfoBox: { backgroundColor: "#f8fafc", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#e2e8f0", marginTop: 6 },
-  testInfoTitle: { fontSize: 12, fontWeight: "800", color: "#0f172a", marginBottom: 4 },
-  testInfoText: { fontSize: 11, color: "#334155", marginBottom: 2 },
+  securityBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(16, 185, 129, 0.08)",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.2)",
+    marginTop: 6,
+  },
+  securityBadgeText: { fontSize: 12, fontWeight: "700", color: "#10b981" },
   orderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   orderLabel: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
   orderValue: { fontSize: 14, fontWeight: "700", color: colors.text },
