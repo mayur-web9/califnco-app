@@ -118,49 +118,101 @@ export default function ProductDetailScreen({ route, navigation }) {
         </TouchableOpacity>
 
         <View style={s.body}>
-          <Text style={[s.category, { color: theme.accent }]}>{product.category}</Text>
-          <Text style={[s.name, { color: theme.text }]}>{product.name}</Text>
-
-          <View style={s.priceRow}>
-            <Text style={[s.price, { color: theme.primary }]}>{formatPrice(product.price)}</Text>
-            <View style={s.ratingRow}>
+          {/* Category Pill */}
+          <View style={s.categoryRow}>
+            <View style={[s.categoryBadge, { backgroundColor: isDark ? "#162a45" : "#e0f2fe" }]}>
+              <Text style={[s.categoryText, { color: "#00b4d8" }]}>{product.category}</Text>
+            </View>
+            <View style={s.ratingPill}>
               <Text style={s.star}>★</Text>
-              <Text style={[s.rating, { color: theme.textSecondary }]}>
-                {product.rating?.toFixed(1) || "4.8"} ({product.reviewCount || 12} reviews)
+              <Text style={[s.ratingText, { color: theme.text }]}>
+                {product.rating ? product.rating.toFixed(1) : "4.6"} ({product.reviewCount || 120} reviews)
               </Text>
             </View>
           </View>
 
+          {/* Product Title */}
+          <Text style={[s.name, { color: theme.text }]}>{product.name}</Text>
+
+          {/* Price & Discount Row (Screen 9) */}
+          <View style={s.priceContainer}>
+            <Text style={[s.price, { color: "#00b4d8" }]}>{formatPrice(product.price)}</Text>
+            <Text style={[s.originalPrice, { color: theme.textMuted }]}>
+              {formatPrice(Math.round(product.price * 1.2))}
+            </Text>
+            <View style={s.discountBadge}>
+              <Text style={s.discountText}>17% OFF</Text>
+            </View>
+          </View>
+
+          {/* Feature Checklist (Screen 9) */}
+          <View style={[s.featureBox, { backgroundColor: isDark ? theme.card : "#f8fafc", borderColor: isDark ? theme.border : "#e2e8f0" }]}>
+            <View style={s.featureRow}>
+              <View style={s.checkCircle}>
+                <MaterialIcons name="check" size={14} color="#00b4d8" />
+              </View>
+              <Text style={[s.featureText, { color: theme.text }]}>
+                {product.category === "Cartridges" ? "100% Food Grade Material" : "7 Stage Purification"}
+              </Text>
+            </View>
+            <View style={s.featureRow}>
+              <View style={s.checkCircle}>
+                <MaterialIcons name="check" size={14} color="#00b4d8" />
+              </View>
+              <Text style={[s.featureText, { color: theme.text }]}>
+                {product.category === "Cartridges" ? "High Dirt Holding Capacity" : "UV + UF Technology"}
+              </Text>
+            </View>
+            <View style={s.featureRow}>
+              <View style={s.checkCircle}>
+                <MaterialIcons name="check" size={14} color="#00b4d8" />
+              </View>
+              <Text style={[s.featureText, { color: theme.text }]}>
+                {product.category === "Cartridges" ? "Universal RO System Fit" : "Free Installation & Demo"}
+              </Text>
+            </View>
+          </View>
+
+          {/* Stock availability */}
           <View style={s.stockRow}>
-            <View style={[s.stockDot, { backgroundColor: product.stock > 0 ? theme.success : theme.error }]} />
+            <View style={[s.stockDot, { backgroundColor: product.stock > 0 ? "#10b981" : "#ef4444" }]} />
             <Text style={[s.stockText, { color: theme.textSecondary }]}>
-              {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+              {product.stock > 0 ? `${product.stock} units in stock` : "Currently out of stock"}
             </Text>
           </View>
 
-          <Text style={[s.sectionTitle, { color: theme.text }]}>Description</Text>
+          {/* Description */}
+          <Text style={[s.sectionTitle, { color: theme.text }]}>Overview</Text>
           <Text style={[s.description, { color: theme.textSecondary }]}>{product.description}</Text>
 
-          <Text style={[s.sectionTitle, { color: theme.text }]}>Quantity</Text>
-          <View style={s.qtyRow}>
-            <TouchableOpacity
-              style={[s.qtyBtn, { backgroundColor: theme.primary }]}
-              onPress={() => setQty(q => Math.max(1, q - 1))}
-            >
-              <Text style={[s.qtyBtnText, { color: theme.textOnPrimary }]}>−</Text>
-            </TouchableOpacity>
-            <Text style={[s.qtyVal, { color: theme.text }]}>{qty}</Text>
-            <TouchableOpacity
-              style={[s.qtyBtn, { backgroundColor: theme.primary }]}
-              onPress={() => setQty(q => q + 1)}
-            >
-              <Text style={[s.qtyBtnText, { color: theme.textOnPrimary }]}>+</Text>
-            </TouchableOpacity>
+          {/* Quantity Stepper Pill (Screen 9) */}
+          <View style={s.qtySection}>
+            <Text style={[s.qtyLabel, { color: theme.text }]}>Quantity</Text>
+            <View style={[s.qtyPill, { backgroundColor: isDark ? "#162a45" : "#f1f5f9", borderColor: isDark ? theme.border : "#e2e8f0" }]}>
+              <TouchableOpacity
+                style={s.qtyStepperBtn}
+                onPress={() => setQty(q => Math.max(1, q - 1))}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.qtyStepperBtnText, { color: theme.text }]}>−</Text>
+              </TouchableOpacity>
+              <Text style={[s.qtyVal, { color: theme.text }]}>{qty}</Text>
+              <TouchableOpacity
+                style={s.qtyStepperBtn}
+                onPress={() => setQty(q => q + 1)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.qtyStepperBtnText, { color: theme.text }]}>+</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <Text style={[s.subtotal, { color: theme.text }]}>
-            Subtotal: {formatPrice(product.price * qty)}
-          </Text>
+          <View style={[s.subtotalCard, { backgroundColor: isDark ? "#0f2338" : "#e0f2fe" }]}>
+            <Text style={[s.subtotalLabel, { color: isDark ? "#94a3b8" : "#0369a1" }]}>Total Order Value:</Text>
+            <Text style={[s.subtotalVal, { color: isDark ? "#00b4d8" : "#0a2540" }]}>
+              {formatPrice(product.price * qty)}
+            </Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -425,28 +477,41 @@ const s = StyleSheet.create({
   },
   zoomHintText: { color: "#ffffff", fontSize: 12, fontWeight: "600" },
   body: { padding: 20 },
-  category: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", marginBottom: 4 },
-  name: { fontSize: 22, fontWeight: "800", lineHeight: 30, marginBottom: 12 },
-  priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  price: { fontSize: 24, fontWeight: "900" },
-  ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  star: { color: "#f59e0b", fontSize: 16 },
-  rating: { fontSize: 13 },
-  stockRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20 },
+  categoryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  categoryBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  categoryText: { fontSize: 11, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 },
+  ratingPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(245, 158, 11, 0.12)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  star: { color: "#f59e0b", fontSize: 14 },
+  ratingText: { fontSize: 12, fontWeight: "700" },
+  name: { fontSize: 22, fontWeight: "900", lineHeight: 28, marginBottom: 12, letterSpacing: -0.2 },
+  priceContainer: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  price: { fontSize: 26, fontWeight: "900" },
+  originalPrice: { fontSize: 16, textDecorationLine: "line-through", fontWeight: "600" },
+  discountBadge: { backgroundColor: "#dcfce7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  discountText: { color: "#16a34a", fontSize: 11, fontWeight: "800" },
+  featureBox: { borderRadius: 16, padding: 16, borderWidth: 1, gap: 10, marginBottom: 18 },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  checkCircle: { width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0, 180, 216, 0.15)", alignItems: "center", justifyContent: "center" },
+  featureText: { fontSize: 13, fontWeight: "600" },
+  stockRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 },
   stockDot: { width: 8, height: 8, borderRadius: 4 },
-  stockText: { fontSize: 13 },
-  sectionTitle: { fontSize: 15, fontWeight: "700", marginBottom: 8, marginTop: 8 },
-  description: { fontSize: 14, lineHeight: 22, marginBottom: 20 },
-  qtyRow: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 12 },
-  qtyBtn: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  qtyBtnText: { fontSize: 20, fontWeight: "700" },
-  qtyVal: { fontSize: 18, fontWeight: "700", minWidth: 32, textAlign: "center" },
-  subtotal: { fontSize: 16, fontWeight: "700", marginBottom: 20 },
-  footer: { flexDirection: "row", gap: 12, padding: 16, borderTopWidth: 1 },
-  cartBtn: { flex: 1, borderWidth: 2, borderRadius: 12, padding: 14, alignItems: "center" },
-  cartBtnText: { fontSize: 15, fontWeight: "700" },
-  buyBtn: { flex: 1, borderRadius: 12, padding: 14, alignItems: "center" },
-  buyBtnText: { fontSize: 15, fontWeight: "700" },
+  stockText: { fontSize: 13, fontWeight: "500" },
+  sectionTitle: { fontSize: 15, fontWeight: "800", marginBottom: 6, marginTop: 4 },
+  description: { fontSize: 13, lineHeight: 20, marginBottom: 18 },
+  qtySection: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  qtyLabel: { fontSize: 15, fontWeight: "800" },
+  qtyPill: { flexDirection: "row", alignItems: "center", borderRadius: 25, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 4 },
+  qtyStepperBtn: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  qtyStepperBtnText: { fontSize: 18, fontWeight: "800" },
+  qtyVal: { fontSize: 16, fontWeight: "800", minWidth: 32, textAlign: "center" },
+  subtotalCard: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 14, borderRadius: 14, marginBottom: 10 },
+  subtotalLabel: { fontSize: 13, fontWeight: "600" },
+  subtotalVal: { fontSize: 17, fontWeight: "900" },
+  footer: { flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1 },
+  cartBtn: { flex: 1, borderWidth: 2, borderRadius: 25, height: 50, alignItems: "center", justifyContent: "center" },
+  cartBtnText: { fontSize: 15, fontWeight: "800" },
+  buyBtn: { flex: 1, borderRadius: 25, height: 50, alignItems: "center", justifyContent: "center" },
+  buyBtnText: { fontSize: 15, fontWeight: "800" },
 
   // Modal zoom styles
   modalOverlay: {

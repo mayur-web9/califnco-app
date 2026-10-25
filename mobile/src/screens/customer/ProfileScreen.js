@@ -11,7 +11,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { logout } from "../../services/authService";
 import Skeleton from "../../components/Skeleton";
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { profile, refreshProfile } = useAuth();
   const { theme, isDark, toggleTheme } = useTheme();
   const [editing, setEditing] = useState(false);
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
 
   async function handleLogout() {
     Alert.alert("Sign out", "Are you sure you want to sign out?", [
-      { text: "Cancel" },
+      { text: "Cancel", style: "cancel" },
       { text: "Sign out", style: "destructive", onPress: () => logout() }
     ]);
   }
@@ -80,7 +80,7 @@ export default function ProfileScreen() {
   if (!profile) {
     return (
       <ScrollView style={[s.container, { backgroundColor: theme.background }]} contentContainerStyle={s.content}>
-        <View style={[s.avatarWrap, { backgroundColor: isDark ? theme.card : theme.primary, alignItems: "center" }]}>
+        <View style={[s.avatarWrap, { backgroundColor: isDark ? theme.card : "#0a2540", alignItems: "center" }]}>
           <Skeleton width={80} height={80} borderRadius={40} style={{ marginBottom: 12 }} />
           <Skeleton width={140} height={20} borderRadius={6} style={{ marginBottom: 8 }} />
           <Skeleton width={80} height={18} borderRadius={10} style={{ marginBottom: 8 }} />
@@ -94,17 +94,28 @@ export default function ProfileScreen() {
     );
   }
 
+  const initials = (profile?.name || "Mayur Patil")
+    .split(" ")
+    .map(p => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <ScrollView style={[s.container, { backgroundColor: theme.background }]} contentContainerStyle={s.content}>
-      {/* Avatar Header */}
-      <View style={[s.avatarWrap, { backgroundColor: isDark ? theme.card : theme.primary }]}>
-        <View style={[s.avatar, { backgroundColor: theme.accent }]}>
-          <Text style={s.avatarText}>{profile?.name?.charAt(0).toUpperCase() || "U"}</Text>
+    <ScrollView style={[s.container, { backgroundColor: theme.background }]} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      {/* 1. Circular Avatar Profile Hero (Screen 13) */}
+      <View style={[s.avatarWrap, { backgroundColor: isDark ? theme.card : "#0a2540" }]}>
+        <View style={s.avatarRing}>
+          <View style={s.avatarCircle}>
+            <Text style={s.avatarInitials}>{initials}</Text>
+          </View>
         </View>
-        <Text style={[s.name, { color: isDark ? theme.text : "#fff", marginTop: 8 }]}>{profile?.name || "Califnco User"}</Text>
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap", justifyContent: "center" }}>
-          <View style={[s.roleBadge, { backgroundColor: theme.chipBg }]}>
-            <Text style={[s.roleText, { color: theme.chipText }]}>
+        <Text style={s.profileName}>{profile?.name || "Mayur Patil"}</Text>
+        <Text style={s.profileEmail}>{profile?.email || "mayur@example.com"}</Text>
+
+        <View style={s.roleBadgeRow}>
+          <View style={s.roleBadge}>
+            <Text style={s.roleText}>
               {profile?.role === "Admin" ? "👑 EXECUTIVE ADMIN" : profile?.role === "Dealer" ? "🏷️ WHOLESALE DEALER" : "💧 RETAIL CONSUMER"}
             </Text>
           </View>
@@ -116,12 +127,94 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-        <Text style={[s.email, { color: isDark ? theme.textSecondary : "rgba(255,255,255,0.7)", marginTop: 6 }]}>
-          {profile?.email}
-        </Text>
       </View>
 
-      {/* Theme Preference Card (Dark Mode Toggle) */}
+      {/* 2. Menu Navigation Items List (Screen 13) */}
+      <View style={[s.menuCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <TouchableOpacity
+          style={s.menuRow}
+          onPress={() => navigation?.navigate ? navigation.navigate("Orders") : null}
+          activeOpacity={0.7}
+        >
+          <View style={s.menuIconWrap}>
+            <MaterialIcons name="receipt-long" size={20} color="#00b4d8" />
+          </View>
+          <Text style={[s.menuTitle, { color: theme.text }]}>My Orders</Text>
+          <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <View style={[s.menuDivider, { backgroundColor: theme.border }]} />
+
+        <TouchableOpacity
+          style={s.menuRow}
+          onPress={() => setEditing(!editing)}
+          activeOpacity={0.7}
+        >
+          <View style={s.menuIconWrap}>
+            <MaterialIcons name="location-on" size={20} color="#00b4d8" />
+          </View>
+          <Text style={[s.menuTitle, { color: theme.text }]}>Delivery Addresses</Text>
+          <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <View style={[s.menuDivider, { backgroundColor: theme.border }]} />
+
+        <TouchableOpacity
+          style={s.menuRow}
+          onPress={() => Alert.alert("Payment Methods", "Califnco supports UPI (Google Pay, PhonePe, Paytm), Credit & Debit cards, and Cash on Delivery.")}
+          activeOpacity={0.7}
+        >
+          <View style={s.menuIconWrap}>
+            <MaterialIcons name="payment" size={20} color="#00b4d8" />
+          </View>
+          <Text style={[s.menuTitle, { color: theme.text }]}>Payment Methods</Text>
+          <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <View style={[s.menuDivider, { backgroundColor: theme.border }]} />
+
+        <TouchableOpacity
+          style={s.menuRow}
+          onPress={() => Alert.alert("Notifications", "You are subscribed to push notifications for live order updates, technician dispatches, and seasonal offers.")}
+          activeOpacity={0.7}
+        >
+          <View style={s.menuIconWrap}>
+            <MaterialIcons name="notifications-none" size={20} color="#00b4d8" />
+          </View>
+          <Text style={[s.menuTitle, { color: theme.text }]}>Notifications</Text>
+          <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <View style={[s.menuDivider, { backgroundColor: theme.border }]} />
+
+        <TouchableOpacity
+          style={s.menuRow}
+          onPress={() => Alert.alert("Help & Support", "Califnco 24/7 Helpline: 1800-267-9000\nEmail: support@califnco.com\nTechnician Support: 9:00 AM - 8:00 PM IST")}
+          activeOpacity={0.7}
+        >
+          <View style={s.menuIconWrap}>
+            <MaterialIcons name="headset-mic" size={20} color="#00b4d8" />
+          </View>
+          <Text style={[s.menuTitle, { color: theme.text }]}>Help & Support</Text>
+          <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        <View style={[s.menuDivider, { backgroundColor: theme.border }]} />
+
+        <TouchableOpacity
+          style={s.menuRow}
+          onPress={() => Alert.alert("About Califnco", "Califnco: Pure Water, Better Life.\nLeading provider of multi-stage RO, UV & UF smart purifiers with door-step IoT maintenance.\nApp Version 1.0.0")}
+          activeOpacity={0.7}
+        >
+          <View style={s.menuIconWrap}>
+            <MaterialIcons name="info-outline" size={20} color="#00b4d8" />
+          </View>
+          <Text style={[s.menuTitle, { color: theme.text }]}>About Us</Text>
+          <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* 3. Settings Card: Theme Preference / Dark Mode (Screen 20) */}
       <View style={[s.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <View style={s.themeRow}>
           <View style={s.themeInfo}>
@@ -129,24 +222,24 @@ export default function ProfileScreen() {
               <MaterialIcons
                 name={isDark ? "dark-mode" : "light-mode"}
                 size={22}
-                color={theme.accent}
+                color="#00b4d8"
               />
-              <Text style={[s.cardTitle, { color: theme.text, marginLeft: 8 }]}>Dark Mode</Text>
+              <Text style={[s.cardTitle, { color: theme.text, marginLeft: 8 }]}>Theme</Text>
             </View>
             <Text style={[s.themeSubtext, { color: theme.textSecondary }]}>
-              {isDark ? "Sleek Obsidian Navy Palette active" : "Crisp Day Blue Palette active"}
+              {isDark ? "Dark Mode (Obsidian Navy)" : "Light Mode (Day Ocean)"}
             </Text>
           </View>
           <Switch
             value={isDark}
             onValueChange={toggleTheme}
-            trackColor={{ false: "#cbd5e1", true: theme.accent }}
+            trackColor={{ false: "#cbd5e1", true: "#00b4d8" }}
             thumbColor={isDark ? "#ffffff" : "#f8fafc"}
           />
         </View>
       </View>
 
-      {/* Referral & Rewards Program Card (Bonus: +5 pts) */}
+      {/* 4. Referral & Rewards Program Card */}
       <View style={[s.card, s.referralCard, { backgroundColor: isDark ? "#0c2340" : "#f0fdf4", borderColor: isDark ? "#1e40af" : "#bbf7d0" }]}>
         <View style={s.referralHeader}>
           <View style={[s.referralIconWrap, { backgroundColor: isDark ? "#1e293b" : "#dcfce7" }]}>
@@ -174,108 +267,81 @@ export default function ProfileScreen() {
 
         {/* Action Row */}
         <View style={s.referralActions}>
-          <TouchableOpacity style={[s.shareInviteBtn, { backgroundColor: theme.primary }]} onPress={handleShareReferral} activeOpacity={0.8}>
+          <TouchableOpacity style={[s.shareInviteBtn, { backgroundColor: "#00b4d8" }]} onPress={handleShareReferral} activeOpacity={0.8}>
             <MaterialIcons name="share" size={17} color="#ffffff" />
             <Text style={s.shareInviteBtnText}>Share Invite Link</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Referral Stats Summary */}
-        <View style={s.referralStats}>
-          <View style={s.statCol}>
-            <Text style={[s.statNum, { color: isDark ? "#f8fafc" : "#0f172a" }]}>3</Text>
-            <Text style={[s.statLabel, { color: isDark ? "#94a3b8" : "#64748b" }]}>Friends Joined</Text>
-          </View>
-          <View style={[s.statDivider, { backgroundColor: isDark ? "#1e293b" : "#cbd5e1" }]} />
-          <View style={s.statCol}>
-            <Text style={[s.statNum, { color: "#10b981" }]}>₹1,500</Text>
-            <Text style={[s.statLabel, { color: isDark ? "#94a3b8" : "#64748b" }]}>Credits Earned</Text>
-          </View>
-          <View style={[s.statDivider, { backgroundColor: isDark ? "#1e293b" : "#cbd5e1" }]} />
-          <View style={s.statCol}>
-            <Text style={[s.statNum, { color: theme.accent }]}>Active</Text>
-            <Text style={[s.statLabel, { color: isDark ? "#94a3b8" : "#64748b" }]}>Reward Status</Text>
-          </View>
-        </View>
       </View>
 
-      {/* Profile Info Card */}
-      <View style={[s.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <View style={s.cardHeader}>
-          <Text style={[s.cardTitle, { color: theme.text }]}>Profile Info</Text>
-          {!editing ? (
-            <TouchableOpacity onPress={() => setEditing(true)}>
-              <Text style={[s.editBtn, { color: theme.accent }]}>Edit</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
+      {/* 5. Address Details Form (Editable on Demand) */}
+      {editing && (
+        <View style={[s.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <View style={s.cardHeader}>
+            <Text style={[s.cardTitle, { color: theme.text }]}>Edit Personal Details</Text>
+          </View>
 
-        <Text style={[s.label, { color: theme.textSecondary }]}>Full Name</Text>
-        <TextInput
-          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.name}
-          onChangeText={v => set("name", v)}
-          editable={editing}
-        />
+          <Text style={[s.label, { color: theme.textSecondary }]}>Full Name</Text>
+          <TextInput
+            style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+            value={form.name}
+            onChangeText={v => set("name", v)}
+          />
 
-        <Text style={[s.label, { color: theme.textSecondary }]}>Phone</Text>
-        <TextInput
-          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.phone}
-          onChangeText={v => set("phone", v)}
-          editable={editing}
-          keyboardType="phone-pad"
-        />
+          <Text style={[s.label, { color: theme.textSecondary }]}>Phone</Text>
+          <TextInput
+            style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+            value={form.phone}
+            onChangeText={v => set("phone", v)}
+            keyboardType="phone-pad"
+          />
 
-        <Text style={[s.label, { color: theme.textSecondary }]}>Address</Text>
-        <TextInput
-          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.line1}
-          onChangeText={v => set("line1", v)}
-          editable={editing}
-          placeholder="Street / Flat no."
-          placeholderTextColor={theme.textMuted}
-        />
-        <TextInput
-          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.city}
-          onChangeText={v => set("city", v)}
-          editable={editing}
-          placeholder="City"
-          placeholderTextColor={theme.textMuted}
-        />
-        <TextInput
-          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.state}
-          onChangeText={v => set("state", v)}
-          editable={editing}
-          placeholder="State"
-          placeholderTextColor={theme.textMuted}
-        />
-        <TextInput
-          style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-          value={form.pincode}
-          onChangeText={v => set("pincode", v)}
-          editable={editing}
-          placeholder="Pincode"
-          placeholderTextColor={theme.textMuted}
-          keyboardType="number-pad"
-        />
+          <Text style={[s.label, { color: theme.textSecondary }]}>Address</Text>
+          <TextInput
+            style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+            value={form.line1}
+            onChangeText={v => set("line1", v)}
+            placeholder="Street / Flat no."
+            placeholderTextColor={theme.textMuted}
+          />
+          <TextInput
+            style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+            value={form.city}
+            onChangeText={v => set("city", v)}
+            placeholder="City"
+            placeholderTextColor={theme.textMuted}
+          />
+          <TextInput
+            style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+            value={form.state}
+            onChangeText={v => set("state", v)}
+            placeholder="State"
+            placeholderTextColor={theme.textMuted}
+          />
+          <TextInput
+            style={[s.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+            value={form.pincode}
+            onChangeText={v => set("pincode", v)}
+            placeholder="Pincode"
+            placeholderTextColor={theme.textMuted}
+            keyboardType="number-pad"
+          />
 
-        {editing && (
           <View style={s.editActions}>
             <TouchableOpacity style={[s.cancelBtn, { borderColor: theme.border }]} onPress={() => setEditing(false)}>
               <Text style={[s.cancelText, { color: theme.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, { backgroundColor: theme.primary }]} onPress={handleSave} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.saveText}>Save</Text>}
+            <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.saveText}>Save Changes</Text>}
             </TouchableOpacity>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
-      <TouchableOpacity style={[s.logoutBtn, { borderColor: theme.error + "66" }]} onPress={handleLogout}>
-        <Text style={[s.logoutText, { color: theme.error }]}>Sign out</Text>
+      {/* 6. Sign Out Button */}
+      <TouchableOpacity style={s.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+        <MaterialIcons name="logout" size={18} color="#ef4444" style={{ marginRight: 6 }} />
+        <Text style={s.logoutText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -284,14 +350,63 @@ export default function ProfileScreen() {
 const s = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingBottom: 40 },
-  avatarWrap: { alignItems: "center", paddingVertical: 28 },
-  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", marginBottom: 12 },
-  avatarText: { fontSize: 34, fontWeight: "800", color: "#fff" },
-  name: { fontSize: 22, fontWeight: "700", marginBottom: 6 },
-  roleBadge: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 6 },
-  roleText: { fontSize: 13, fontWeight: "700" },
-  email: { fontSize: 13 },
-  card: { marginHorizontal: 16, marginTop: 16, borderRadius: 14, padding: 20, borderWidth: 1, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  avatarWrap: { alignItems: "center", paddingTop: 32, paddingBottom: 24, paddingHorizontal: 20 },
+  avatarRing: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 2.5,
+    borderColor: "#00b4d8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    shadowColor: "#00b4d8",
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  avatarCircle: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: "#0d2b4d",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInitials: { fontSize: 26, fontWeight: "900", color: "#00b4d8", letterSpacing: 1 },
+  profileName: { fontSize: 22, fontWeight: "900", color: "#ffffff", letterSpacing: -0.3, marginBottom: 4 },
+  profileEmail: { fontSize: 13, color: "rgba(255, 255, 255, 0.75)", marginBottom: 10 },
+  roleBadgeRow: { flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "center" },
+  roleBadge: { backgroundColor: "rgba(0, 180, 216, 0.18)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4 },
+  roleText: { color: "#00b4d8", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+
+  // Screen 13 Menu Card
+  menuCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  menuRow: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 4 },
+  menuIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(0, 180, 216, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  menuTitle: { flex: 1, fontSize: 14, fontWeight: "700" },
+  menuDivider: { height: 1, marginHorizontal: 4 },
+
+  card: { marginHorizontal: 16, marginTop: 14, borderRadius: 18, padding: 18, borderWidth: 1, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   themeRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   themeInfo: { flex: 1, paddingRight: 12 },
   themeTitleRow: { flexDirection: "row", alignItems: "center" },
@@ -301,29 +416,34 @@ const s = StyleSheet.create({
   referralIconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   referralTitle: { fontSize: 16, fontWeight: "800" },
   referralSubtitle: { fontSize: 12, marginTop: 2, lineHeight: 17 },
-  codeBox: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginBottom: 12 },
+  codeBox: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
   codeLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
   codeText: { fontSize: 16, fontWeight: "800", fontFamily: Platform.OS === "ios" ? "Courier" : "monospace", marginTop: 2 },
   copyBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   copyBtnText: { fontSize: 12, fontWeight: "700" },
-  referralActions: { marginBottom: 12 },
-  shareInviteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10 },
-  shareInviteBtnText: { color: "#ffffff", fontSize: 14, fontWeight: "700" },
-  referralStats: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.06)" },
-  statCol: { alignItems: "center" },
-  statNum: { fontSize: 15, fontWeight: "800" },
-  statLabel: { fontSize: 11, marginTop: 2 },
-  statDivider: { width: 1, height: 24 },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  cardTitle: { fontSize: 16, fontWeight: "700" },
-  editBtn: { fontWeight: "700", fontSize: 14 },
-  label: { fontSize: 12, fontWeight: "600", marginBottom: 5 },
-  input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 14, marginBottom: 12 },
+  referralActions: { marginBottom: 4 },
+  shareInviteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 25 },
+  shareInviteBtnText: { color: "#ffffff", fontSize: 14, fontWeight: "800" },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  cardTitle: { fontSize: 15, fontWeight: "800" },
+  label: { fontSize: 12, fontWeight: "700", marginBottom: 5 },
+  input: { borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 12 },
   editActions: { flexDirection: "row", gap: 12, marginTop: 4 },
-  cancelBtn: { flex: 1, borderWidth: 1.5, borderRadius: 10, padding: 12, alignItems: "center" },
-  cancelText: { fontWeight: "600" },
-  saveBtn: { flex: 1, borderRadius: 10, padding: 12, alignItems: "center" },
-  saveText: { color: "#fff", fontWeight: "700" },
-  logoutBtn: { margin: 16, borderWidth: 1.5, borderRadius: 12, padding: 14, alignItems: "center" },
-  logoutText: { fontWeight: "700", fontSize: 15 }
+  cancelBtn: { flex: 1, borderWidth: 1.5, borderRadius: 25, height: 46, alignItems: "center", justifyContent: "center" },
+  cancelText: { fontWeight: "700" },
+  saveBtn: { flex: 1, backgroundColor: "#00b4d8", borderRadius: 25, height: 46, alignItems: "center", justifyContent: "center" },
+  saveText: { color: "#fff", fontWeight: "800" },
+  logoutBtn: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderWidth: 1.5,
+    borderColor: "rgba(239, 68, 68, 0.4)",
+    backgroundColor: "rgba(239, 68, 68, 0.06)",
+    borderRadius: 25,
+    height: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoutText: { fontWeight: "800", fontSize: 15, color: "#ef4444" }
 });

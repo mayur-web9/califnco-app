@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert, ActivityIndicator, Modal
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useCart } from "../../hooks/useCart";
 import { useAuth } from "../../hooks/useAuth";
 import { formatPrice } from "../../utils/formatPrice";
@@ -29,6 +30,9 @@ export default function CheckoutScreen({ navigation }) {
   const [statusMsg, setStatusMsg] = useState("");
   const [addressQuery, setAddressQuery] = useState("");
   const [searchingAddr, setSearchingAddr] = useState(false);
+
+  const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [isEditingAddress, setIsEditingAddress] = useState(!profile?.address?.line1);
 
   // Modals & Order Receipt
   const [checkoutData, setCheckoutData] = useState(null);
@@ -354,38 +358,121 @@ export default function CheckoutScreen({ navigation }) {
   }
 
   return (
-    <ScrollView style={s.container} keyboardShouldPersistTaps="handled">
-      {/* Address search box */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Delivery Address</Text>
-        <View style={s.searchRow}>
-          <TextInput
-            style={s.searchInput}
-            value={addressQuery}
-            onChangeText={setAddressQuery}
-            placeholder="Search locality / landmark..."
-            placeholderTextColor={colors.textMuted}
-          />
-          <TouchableOpacity style={s.searchBtn} onPress={handleSearchAddress} disabled={searchingAddr}>
-            {searchingAddr ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.searchBtnText}>Lookup</Text>}
+    <ScrollView style={s.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      {/* 1. Delivery Address Card (Screen 11) */}
+      <View style={s.card}>
+        <View style={s.cardHeaderRow}>
+          <View style={s.headerWithIcon}>
+            <View style={s.locationIconWrap}>
+              <MaterialIcons name="location-on" size={20} color="#00b4d8" />
+            </View>
+            <Text style={s.cardTitle}>Delivery Address</Text>
+          </View>
+          <TouchableOpacity onPress={() => setIsEditingAddress(!isEditingAddress)}>
+            <Text style={s.changeBtnText}>{isEditingAddress ? "Done" : "Change"}</Text>
           </TouchableOpacity>
         </View>
 
-        <TextInput style={s.input} value={address.line1} onChangeText={v => setAddr("line1", v)} placeholder="Street address, flat/house no." placeholderTextColor={colors.textMuted} />
-        <TextInput style={s.input} value={address.city} onChangeText={v => setAddr("city", v)} placeholder="City" placeholderTextColor={colors.textMuted} />
-        <TextInput style={s.input} value={address.state} onChangeText={v => setAddr("state", v)} placeholder="State" placeholderTextColor={colors.textMuted} />
-        <TextInput style={s.input} value={address.pincode} onChangeText={v => setAddr("pincode", v)} placeholder="6-digit PIN code" placeholderTextColor={colors.textMuted} keyboardType="number-pad" maxLength={6} />
+        {!isEditingAddress ? (
+          <View style={s.addressPreview}>
+            <Text style={s.addressName}>{profile?.name || "Mayur Patil"}</Text>
+            <Text style={s.addressLine}>
+              {address.line1 ? `${address.line1}, ${address.city}, ${address.state} - ${address.pincode}` : "No address specified. Tap Change to enter address."}
+            </Text>
+          </View>
+        ) : (
+          <View style={s.editAddressForm}>
+            <View style={s.searchRow}>
+              <TextInput
+                style={s.searchInput}
+                value={addressQuery}
+                onChangeText={setAddressQuery}
+                placeholder="Search locality / landmark..."
+                placeholderTextColor={colors.textMuted}
+              />
+              <TouchableOpacity style={s.searchBtn} onPress={handleSearchAddress} disabled={searchingAddr}>
+                {searchingAddr ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.searchBtnText}>Lookup</Text>}
+              </TouchableOpacity>
+            </View>
+
+            <TextInput style={s.input} value={address.line1} onChangeText={v => setAddr("line1", v)} placeholder="Street address, flat/house no." placeholderTextColor={colors.textMuted} />
+            <TextInput style={s.input} value={address.city} onChangeText={v => setAddr("city", v)} placeholder="City" placeholderTextColor={colors.textMuted} />
+            <TextInput style={s.input} value={address.state} onChangeText={v => setAddr("state", v)} placeholder="State" placeholderTextColor={colors.textMuted} />
+            <TextInput style={s.input} value={address.pincode} onChangeText={v => setAddr("pincode", v)} placeholder="6-digit PIN code" placeholderTextColor={colors.textMuted} keyboardType="number-pad" maxLength={6} />
+          </View>
+        )}
       </View>
 
-      {/* Order Summary */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Order Summary</Text>
-        {items.map(i => (
-          <View key={i.productId} style={s.orderRow}>
-            <Text style={s.orderItem} numberOfLines={1}>{i.name} x{i.qty}</Text>
-            <Text style={s.orderItemPrice}>{formatPrice(i.price * i.qty)}</Text>
+      {/* 2. Payment Method Card (Screen 11) */}
+      <View style={s.card}>
+        <View style={s.headerWithIcon}>
+          <View style={s.paymentIconWrap}>
+            <MaterialIcons name="payment" size={20} color="#00b4d8" />
           </View>
-        ))}
+          <Text style={s.cardTitle}>Payment Method</Text>
+        </View>
+
+        <TouchableOpacity
+          style={[s.payMethodRow, paymentMethod === "upi" && s.payMethodRowActive]}
+          onPress={() => setPaymentMethod("upi")}
+          activeOpacity={0.8}
+        >
+          <View style={[s.radioOuter, paymentMethod === "upi" && s.radioOuterActive]}>
+            {paymentMethod === "upi" && <View style={s.radioInner} />}
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={s.payMethodLabel}>UPI (Google Pay, PhonePe, Paytm)</Text>
+            <Text style={s.payMethodSub}>Instant payment via UPI handle or QR</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.payMethodRow, paymentMethod === "card" && s.payMethodRowActive]}
+          onPress={() => setPaymentMethod("card")}
+          activeOpacity={0.8}
+        >
+          <View style={[s.radioOuter, paymentMethod === "card" && s.radioOuterActive]}>
+            {paymentMethod === "card" && <View style={s.radioInner} />}
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={s.payMethodLabel}>Credit / Debit Card</Text>
+            <Text style={s.payMethodSub}>Visa, Mastercard, RuPay, Maestro</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.payMethodRow, paymentMethod === "cod" && s.payMethodRowActive]}
+          onPress={() => setPaymentMethod("cod")}
+          activeOpacity={0.8}
+        >
+          <View style={[s.radioOuter, paymentMethod === "cod" && s.radioOuterActive]}>
+            {paymentMethod === "cod" && <View style={s.radioInner} />}
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={s.payMethodLabel}>Cash on Delivery</Text>
+            <Text style={s.payMethodSub}>Pay technician upon installation</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Sandbox info badge */}
+        <View style={s.testInfoBox}>
+          <Text style={s.testInfoTitle}>🧪 Sandbox Testing Credentials</Text>
+          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test Card:</Text> 4111 1111 1111 1111 (Exp: 12/30, CVV: 123)</Text>
+          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test UPI ID:</Text> success@razorpay</Text>
+        </View>
+      </View>
+
+      {/* 3. Order Summary Card (Screen 11) */}
+      <View style={s.card}>
+        <Text style={s.cardTitle}>Order Summary</Text>
+        <View style={s.orderRow}>
+          <Text style={s.orderLabel}>Items ({items.length})</Text>
+          <Text style={s.orderValue}>{formatPrice(total)}</Text>
+        </View>
+        <View style={s.orderRow}>
+          <Text style={s.orderLabel}>Delivery Fee</Text>
+          <Text style={[s.orderValue, { color: "#10b981", fontWeight: "800" }]}>₹ 0 (Free)</Text>
+        </View>
         <View style={s.divider} />
         <View style={s.orderRow}>
           <Text style={s.totalLabel}>Total</Text>
@@ -393,34 +480,18 @@ export default function CheckoutScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Payment Security & Sandbox Notice */}
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Payment Options</Text>
-        <View style={s.payBadge}>
-          <Text style={s.payBadgeText}>🔒 Razorpay Gateway (Sandbox Test Mode)</Text>
-        </View>
-        <View style={s.testInfoBox}>
-          <Text style={s.testInfoTitle}>🧪 Sandbox Testing Credentials</Text>
-          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test Card:</Text> 4111 1111 1111 1111 (Exp: 12/30, CVV: 123)</Text>
-          <Text style={s.testInfoText}>• <Text style={{ fontWeight: "700" }}>Test UPI ID:</Text> success@razorpay</Text>
-          <Text style={s.testInfoWarning}>
-            Notice: Real UPI apps (GPay/PhonePe) cannot process test sandbox payments because banks reject test merchant VPAs. Use the test card or test UPI ID above.
-          </Text>
-        </View>
-      </View>
-
       {statusMsg ? (
         <View style={s.statusBanner}>
-          <ActivityIndicator size="small" color={colors.primary} />
+          <ActivityIndicator size="small" color="#00b4d8" />
           <Text style={s.statusBannerText}>{statusMsg}</Text>
         </View>
       ) : null}
 
       <View style={s.footer}>
-        <TouchableOpacity style={s.placeBtn} onPress={startRazorpayPayment} disabled={loading}>
+        <TouchableOpacity style={s.placeBtn} onPress={startRazorpayPayment} disabled={loading} activeOpacity={0.85}>
           {loading
             ? <ActivityIndicator color="#fff" />
-            : <Text style={s.placeBtnText}>Proceed to Pay {formatPrice(total)}</Text>
+            : <Text style={s.placeBtnText}>Place Order • {formatPrice(total)}</Text>
           }
         </TouchableOpacity>
       </View>
@@ -499,32 +570,83 @@ export default function CheckoutScreen({ navigation }) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  section: { backgroundColor: colors.card, margin: 16, borderRadius: 14, padding: 20, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 16 },
+  card: {
+    backgroundColor: colors.card,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  headerWithIcon: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  locationIconWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0, 180, 216, 0.12)", alignItems: "center", justifyContent: "center" },
+  paymentIconWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(0, 180, 216, 0.12)", alignItems: "center", justifyContent: "center" },
+  cardTitle: { fontSize: 16, fontWeight: "800", color: colors.text },
+  changeBtnText: { color: "#00b4d8", fontSize: 14, fontWeight: "700" },
+  addressPreview: { paddingLeft: 4 },
+  addressName: { fontSize: 15, fontWeight: "800", color: colors.text, marginBottom: 4 },
+  addressLine: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
+  editAddressForm: { marginTop: 6 },
   searchRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  searchInput: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 11, fontSize: 14, color: colors.text, backgroundColor: colors.background },
-  searchBtn: { backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 16, justifyContent: "center", alignItems: "center" },
+  searchInput: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 11, fontSize: 14, color: colors.text, backgroundColor: colors.background },
+  searchBtn: { backgroundColor: "#00b4d8", borderRadius: 12, paddingHorizontal: 16, justifyContent: "center", alignItems: "center" },
   searchBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 13, fontSize: 15, color: colors.text, marginBottom: 12, backgroundColor: colors.background },
-  orderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  orderItem: { flex: 1, fontSize: 14, color: colors.textSecondary, marginRight: 8 },
-  orderItemPrice: { fontSize: 14, fontWeight: "600", color: colors.text },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
-  totalLabel: { fontSize: 16, fontWeight: "700", color: colors.text },
-  totalValue: { fontSize: 20, fontWeight: "900", color: colors.primary },
-  payBadge: { backgroundColor: "#f0fdf4", borderRadius: 8, padding: 12, borderWidth: 1, borderColor: "#bbf7d0", marginBottom: 10 },
-  payBadgeText: { fontSize: 14, fontWeight: "700", color: colors.success },
-  payNote: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
-  testInfoBox: { backgroundColor: "#f8fafc", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#e2e8f0", marginTop: 4 },
-  testInfoTitle: { fontSize: 13, fontWeight: "800", color: "#0f172a", marginBottom: 6 },
-  testInfoText: { fontSize: 12, color: "#334155", marginBottom: 3 },
-  testInfoWarning: { fontSize: 11, color: "#dc2626", marginTop: 6, lineHeight: 15 },
-  statusBanner: { marginHorizontal: 16, marginBottom: 8, padding: 12, backgroundColor: "#eff6ff", borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 10 },
-  statusBannerText: { fontSize: 13, color: colors.primary, flex: 1 },
-  footer: { padding: 16, paddingBottom: 32 },
-  placeBtn: { backgroundColor: colors.primary, borderRadius: 12, padding: 18, alignItems: "center" },
-  placeBtnText: { color: "#fff", fontSize: 17, fontWeight: "800" },
-  modalHeader: { height: 56, backgroundColor: colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, fontSize: 14, color: colors.text, marginBottom: 10, backgroundColor: colors.background },
+  payMethodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    marginBottom: 10,
+    backgroundColor: colors.background,
+  },
+  payMethodRowActive: {
+    borderColor: "#00b4d8",
+    backgroundColor: "rgba(0, 180, 216, 0.05)",
+  },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioOuterActive: {
+    borderColor: "#00b4d8",
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#00b4d8",
+  },
+  payMethodLabel: { fontSize: 14, fontWeight: "700", color: colors.text },
+  payMethodSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  testInfoBox: { backgroundColor: "#f8fafc", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#e2e8f0", marginTop: 6 },
+  testInfoTitle: { fontSize: 12, fontWeight: "800", color: "#0f172a", marginBottom: 4 },
+  testInfoText: { fontSize: 11, color: "#334155", marginBottom: 2 },
+  orderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  orderLabel: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
+  orderValue: { fontSize: 14, fontWeight: "700", color: colors.text },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 8 },
+  totalLabel: { fontSize: 16, fontWeight: "800", color: colors.text },
+  totalValue: { fontSize: 20, fontWeight: "900", color: "#00b4d8" },
+  statusBanner: { marginHorizontal: 16, marginTop: 12, padding: 12, backgroundColor: "#eff6ff", borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 10 },
+  statusBannerText: { fontSize: 13, color: "#00b4d8", flex: 1, fontWeight: "600" },
+  footer: { padding: 16, paddingBottom: 36, paddingTop: 18 },
+  placeBtn: { backgroundColor: "#00b4d8", borderRadius: 25, height: 52, alignItems: "center", justifyContent: "center", shadowColor: "#00b4d8", shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },
+  placeBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  modalHeader: { height: 56, backgroundColor: "#0a2540", flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
   modalHeaderTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
   modalClose: { color: "#fff", fontSize: 22, fontWeight: "700", padding: 6 }
 });

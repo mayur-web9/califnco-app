@@ -44,52 +44,63 @@ export default function LoginView({ onLoginSuccess }) {
     <div className="login-wrap">
       <div className="login-card">
         <div className="login-brand">
-          <div className="login-logo">💧</div>
-          <h1 className="login-title">Califnco Admin</h1>
-          <p className="login-subtitle">Executive Command Center</p>
+          <div className="brand-logo-droplet">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="url(#cyan-grad-admin)" />
+              <defs>
+                <linearGradient id="cyan-grad-admin" x1="12" y1="2.69" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#00b4d8" />
+                  <stop offset="1" stopColor="#0284c7" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h1 className="login-brand-name">Califnco</h1>
+          <p className="login-brand-slogan">Pure Water, Better Life</p>
+          <div className="login-divider-pill"></div>
+          <h2 className="login-welcome-title">Welcome Back</h2>
+          <p className="login-welcome-sub">Login to your executive account</p>
         </div>
 
         {error && (
-          <div style={{
-            background: "rgba(239, 68, 68, 0.15)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
-            color: "#f87171",
-            padding: "12px",
-            borderRadius: "8px",
-            fontSize: "13px",
-            marginBottom: "16px"
-          }}>
-            {error}
+          <div className="login-error-banner">
+            <span style={{ marginRight: "6px" }}>⚠️</span> {error}
           </div>
         )}
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label className="form-label">Admin Email</label>
-            <input
-              type="email"
-              className="form-input"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="admin@califnco.com"
-              required
-            />
+            <label className="form-label">Email or Phone</label>
+            <div className="input-with-icon">
+              <span className="input-icon">👤</span>
+              <input
+                type="email"
+                className="form-input form-input-padded"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="admin@califnco.com"
+                required
+              />
+            </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: "24px" }}>
+          <div className="form-group" style={{ marginBottom: "26px" }}>
             <label className="form-label">Password</label>
-            <input
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              required
-            />
+            <div className="input-with-icon">
+              <span className="input-icon">🔒</span>
+              <input
+                type="password"
+                className="form-input form-input-padded"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+              />
+            </div>
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: "100%", padding: "14px" }} disabled={loading}>
-            {loading ? "Authenticating..." : "Sign in to Dashboard →"}
+          <button type="submit" className="btn-pill-primary" style={{ width: "100%", height: "48px" }} disabled={loading}>
+            {loading ? "Authenticating..." : "Login"}
           </button>
         </form>
       </div>

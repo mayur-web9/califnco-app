@@ -171,16 +171,16 @@ const s = StyleSheet.create({
   card: {
     flex: 0.48,
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 18,
     margin: 6,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 10,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.04)"
+    borderColor: "rgba(0, 180, 216, 0.14)"
   },
   badge: {
     position: "absolute",
@@ -188,7 +188,7 @@ const s = StyleSheet.create({
     left: 8,
     zIndex: 2,
     backgroundColor: colors.accent,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
     shadowColor: "#000",
@@ -206,19 +206,19 @@ const s = StyleSheet.create({
   imageContainer: {
     width: "100%",
     height: 145,
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(0, 180, 216, 0.03)",
     alignItems: "center",
     justifyContent: "center",
-    padding: 8,
+    padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.04)"
+    borderBottomColor: "rgba(0, 180, 216, 0.06)"
   },
   image: {
     width: "100%",
     height: "100%"
   },
   body: {
-    padding: 10,
+    padding: 12,
     flex: 1,
     justifyContent: "space-between"
   },
@@ -241,11 +241,11 @@ const s = StyleSheet.create({
     color: "#e11d48"
   },
   name: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: "700",
     color: colors.text,
-    lineHeight: 17,
-    minHeight: 52,
+    lineHeight: 18,
+    minHeight: 46,
     marginBottom: 6
   },
   footer: {
@@ -253,23 +253,22 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: "auto",
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.04)"
+    paddingTop: 6
   },
   price: {
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: "900",
-    color: colors.primary
+    color: colors.accent
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fef3c7",
+    backgroundColor: "#fffbeb",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    gap: 2
+    gap: 2,
+    marginTop: 2
   },
   star: {
     color: "#d97706",
@@ -284,17 +283,17 @@ const s = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.primary,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 3
   },
   quickAddBtnSuccess: {
-    backgroundColor: "#10b981"
+    backgroundColor: colors.success
   },
   floatingPlus: {
     position: "absolute",

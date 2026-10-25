@@ -21,7 +21,7 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   function set(field, value) {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   // Password rules validation
@@ -32,7 +32,6 @@ export default function RegisterScreen({ navigation }) {
   const hasNumber = /[0-9]/.test(pwd);
   const hasSpecial = /[^a-zA-Z0-9]/.test(pwd);
   const isMatch = form.password && form.confirmPassword && form.password === form.confirmPassword;
-  const isPasswordValid = hasMinLength && hasLower && hasUpper && hasNumber && hasSpecial;
 
   async function handleRegister() {
     if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.password || !form.confirmPassword) {
@@ -45,23 +44,8 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    if (!hasLower) {
-      Alert.alert("Password Incomplete", "Password must contain at least 1 lowercase letter (a-z).");
-      return;
-    }
-
-    if (!hasUpper) {
-      Alert.alert("Password Incomplete", "Password must contain at least 1 uppercase letter (A-Z).");
-      return;
-    }
-
-    if (!hasNumber) {
-      Alert.alert("Password Incomplete", "Password must contain at least 1 number (0-9).");
-      return;
-    }
-
-    if (!hasSpecial) {
-      Alert.alert("Password Incomplete", "Password must contain at least 1 special character / symbol (e.g. @, #, $, %, !).");
+    if (!hasLower || !hasUpper || !hasNumber || !hasSpecial) {
+      Alert.alert("Password Incomplete", "Password must contain uppercase, lowercase, number, and a special character.");
       return;
     }
 
@@ -79,7 +63,7 @@ export default function RegisterScreen({ navigation }) {
         password: form.password,
         role: form.role
       });
-      // AuthProvider picks up onAuthStateChanged automatically
+      // AuthProvider handles onAuthStateChanged
     } catch (err) {
       Alert.alert("Registration failed", err.message);
     } finally {
@@ -90,152 +74,192 @@ export default function RegisterScreen({ navigation }) {
   return (
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+        {/* Top Brand Logo */}
         <View style={s.header}>
-          <Text style={s.logo}>💧 Califnco</Text>
-          <Text style={s.subtitle}>Pure Water, Delivered</Text>
+          <View style={s.logoCircle}>
+            <MaterialIcons name="water-drop" size={38} color="#00b4d8" />
+          </View>
+          <Text style={s.logoText}>Califnco</Text>
+          <Text style={s.subtitle}>Pure Water, Better Life</Text>
         </View>
 
+        {/* Card Container */}
         <View style={s.card}>
           <Text style={s.title}>Create Account</Text>
+          <Text style={s.cardSub}>Join us for clean and healthy water</Text>
 
-          <Text style={s.label}>Full Name</Text>
-          <TextInput
-            style={s.input}
-            value={form.name}
-            onChangeText={v => set("name", v)}
-            placeholder="Ananya Sharma"
-            placeholderTextColor={colors.textMuted}
-          />
-
-          <Text style={s.label}>Email</Text>
-          <TextInput
-            style={s.input}
-            value={form.email}
-            onChangeText={v => set("email", v)}
-            placeholder="you@example.com"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <Text style={s.label}>Phone</Text>
-          <TextInput
-            style={s.input}
-            value={form.phone}
-            onChangeText={v => set("phone", v)}
-            placeholder="+919876543210"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="phone-pad"
-          />
-
-          <Text style={s.label}>Password</Text>
-          <View style={s.passwordContainer}>
+          {/* Full Name */}
+          <View style={s.inputWrapper}>
+            <MaterialIcons name="person-outline" size={20} color="#00b4d8" style={s.inputIcon} />
             <TextInput
-              style={s.passwordInput}
+              style={s.input}
+              value={form.name}
+              onChangeText={(v) => set("name", v)}
+              placeholder="Full Name"
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+
+          {/* Email or Phone */}
+          <View style={s.inputWrapper}>
+            <MaterialIcons name="mail-outline" size={20} color="#00b4d8" style={s.inputIcon} />
+            <TextInput
+              style={s.input}
+              value={form.email}
+              onChangeText={(v) => set("email", v)}
+              placeholder="Email Address"
+              placeholderTextColor="#94a3b8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          {/* Phone */}
+          <View style={s.inputWrapper}>
+            <MaterialIcons name="phone-android" size={20} color="#00b4d8" style={s.inputIcon} />
+            <TextInput
+              style={s.input}
+              value={form.phone}
+              onChangeText={(v) => set("phone", v)}
+              placeholder="Phone Number (+91...)"
+              placeholderTextColor="#94a3b8"
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          {/* Password */}
+          <View style={s.inputWrapper}>
+            <MaterialIcons name="lock-outline" size={20} color="#00b4d8" style={s.inputIcon} />
+            <TextInput
+              style={s.input}
               value={form.password}
-              onChangeText={v => set("password", v)}
-              placeholder="At least 9 characters"
-              placeholderTextColor={colors.textMuted}
+              onChangeText={(v) => set("password", v)}
+              placeholder="Create strong password"
+              placeholderTextColor="#94a3b8"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
             />
-            <TouchableOpacity
-              style={s.eyeBtn}
-              onPress={() => setShowPassword(p => !p)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPassword((p) => !p)}>
               <MaterialIcons
                 name={showPassword ? "visibility" : "visibility-off"}
-                size={22}
-                color={colors.textSecondary}
+                size={20}
+                color="#94a3b8"
               />
             </TouchableOpacity>
           </View>
 
-          <Text style={s.label}>Confirm Password</Text>
-          <View style={s.passwordContainer}>
+          {/* Confirm Password */}
+          <View style={s.inputWrapper}>
+            <MaterialIcons name="lock-outline" size={20} color="#00b4d8" style={s.inputIcon} />
             <TextInput
-              style={s.passwordInput}
+              style={s.input}
               value={form.confirmPassword}
-              onChangeText={v => set("confirmPassword", v)}
-              placeholder="Re-enter your password"
-              placeholderTextColor={colors.textMuted}
+              onChangeText={(v) => set("confirmPassword", v)}
+              placeholder="Confirm password"
+              placeholderTextColor="#94a3b8"
               secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
             />
-            <TouchableOpacity
-              style={s.eyeBtn}
-              onPress={() => setShowConfirmPassword(p => !p)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={s.eyeBtn} onPress={() => setShowConfirmPassword((p) => !p)}>
               <MaterialIcons
                 name={showConfirmPassword ? "visibility" : "visibility-off"}
-                size={22}
-                color={colors.textSecondary}
+                size={20}
+                color="#94a3b8"
               />
             </TouchableOpacity>
           </View>
 
-          {/* Password Requirements Checklist */}
-          <View style={s.reqContainer}>
-            <Text style={s.reqHeader}>Password Requirements:</Text>
-            <View style={s.reqRow}>
-              <Text style={[s.reqBadge, hasMinLength ? s.reqPass : s.reqFail]}>
-                {hasMinLength ? "✓" : "○"} At least 9 characters ({pwd.length}/9)
-              </Text>
+          {/* Password Validation Checklist */}
+          {form.password.length > 0 && (
+            <View style={s.reqContainer}>
+              <View style={s.reqGrid}>
+                <Text style={[s.reqBadge, hasMinLength ? s.reqPass : s.reqFail]}>
+                  {hasMinLength ? "✓" : "○"} 9+ chars
+                </Text>
+                <Text style={[s.reqBadge, hasUpper ? s.reqPass : s.reqFail]}>
+                  {hasUpper ? "✓" : "○"} Uppercase
+                </Text>
+                <Text style={[s.reqBadge, hasLower ? s.reqPass : s.reqFail]}>
+                  {hasLower ? "✓" : "○"} Lowercase
+                </Text>
+                <Text style={[s.reqBadge, hasNumber ? s.reqPass : s.reqFail]}>
+                  {hasNumber ? "✓" : "○"} Number
+                </Text>
+                <Text style={[s.reqBadge, hasSpecial ? s.reqPass : s.reqFail]}>
+                  {hasSpecial ? "✓" : "○"} Symbol
+                </Text>
+                {form.confirmPassword.length > 0 && (
+                  <Text style={[s.reqBadge, isMatch ? s.reqPass : s.reqFail]}>
+                    {isMatch ? "✓ Matches" : "✗ Mismatch"}
+                  </Text>
+                )}
+              </View>
             </View>
-            <View style={s.reqGrid}>
-              <Text style={[s.reqBadge, hasLower ? s.reqPass : s.reqFail]}>
-                {hasLower ? "✓" : "○"} 1 lowercase (a-z)
-              </Text>
-              <Text style={[s.reqBadge, hasUpper ? s.reqPass : s.reqFail]}>
-                {hasUpper ? "✓" : "○"} 1 uppercase (A-Z)
-              </Text>
-              <Text style={[s.reqBadge, hasNumber ? s.reqPass : s.reqFail]}>
-                {hasNumber ? "✓" : "○"} 1 number (0-9)
-              </Text>
-              <Text style={[s.reqBadge, hasSpecial ? s.reqPass : s.reqFail]}>
-                {hasSpecial ? "✓" : "○"} 1 special char (@$!%*?)
-              </Text>
-            </View>
-            {form.confirmPassword.length > 0 && (
-              <Text style={[s.reqBadge, isMatch ? s.reqPass : s.reqFail, { marginTop: 6 }]}>
-                {isMatch ? "✓ Passwords match" : "✗ Passwords do not match"}
-              </Text>
-            )}
-          </View>
-
-          <Text style={s.label}>Register as</Text>
-          <View style={s.roleRow}>
-            {["Customer", "Dealer"].map(r => (
-              <TouchableOpacity
-                key={r}
-                style={[s.roleBtn, form.role === r && s.roleBtnActive]}
-                onPress={() => set("role", r)}
-              >
-                <Text style={[s.roleBtnText, form.role === r && s.roleBtnTextActive]}>{r}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {form.role === "Dealer" && (
-            <Text style={s.note}>
-              Dealer accounts require admin approval before you can see wholesale prices.
-            </Text>
           )}
 
-          <TouchableOpacity
-            style={[s.button, (!isPasswordValid || !isMatch) && s.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.buttonText}>Create Account</Text>}
+          {/* Role Selection */}
+          <Text style={s.roleLabel}>Account Type</Text>
+          <View style={s.roleRow}>
+            {["Customer", "Dealer"].map((r) => {
+              const active = form.role === r;
+              return (
+                <TouchableOpacity
+                  key={r}
+                  style={[s.roleBtn, active && s.roleBtnActive]}
+                  onPress={() => set("role", r)}
+                >
+                  <MaterialIcons
+                    name={r === "Customer" ? "person" : "storefront"}
+                    size={16}
+                    color={active ? "#ffffff" : "#64748b"}
+                  />
+                  <Text style={[s.roleBtnText, active && s.roleBtnTextActive]}>
+                    {r === "Customer" ? "Retail Customer" : "Wholesale Dealer"}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity style={s.registerBtn} onPress={handleRegister} disabled={loading} activeOpacity={0.88}>
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={s.registerBtnText}>Sign Up</Text>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-            <Text style={s.link}>Already have an account? <Text style={s.linkAccent}>Sign in</Text></Text>
-          </TouchableOpacity>
+          {/* Social Divider */}
+          <View style={s.dividerRow}>
+            <View style={s.dividerLine} />
+            <Text style={s.dividerText}>or continue with</Text>
+            <View style={s.dividerLine} />
+          </View>
+
+          {/* Social Icons */}
+          <View style={s.socialRow}>
+            <TouchableOpacity
+              style={s.socialBtn}
+              onPress={() => Alert.alert("Google Sign-In", "Google OAuth will connect with your Google Workspace account.")}
+            >
+              <Text style={s.socialG}>G</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.socialBtn}
+              onPress={() => Alert.alert("Apple Sign-In", "Apple ID authentication available on iOS devices.")}
+            >
+              <MaterialIcons name="apple" size={22} color="#0f172a" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Switch to Login */}
+          <View style={s.switchRow}>
+            <Text style={s.switchText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+              <Text style={s.switchLink}>Login</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -243,51 +267,99 @@ export default function RegisterScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.primary },
-  container: { flexGrow: 1, justifyContent: "center", padding: 24, paddingVertical: 40 },
-  header: { alignItems: "center", marginBottom: 28 },
-  logo: { fontSize: 36, fontWeight: "800", color: colors.textOnPrimary, letterSpacing: 1 },
-  subtitle: { fontSize: 14, color: colors.accent, marginTop: 4 },
-  card: { backgroundColor: colors.card, borderRadius: 20, padding: 24, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 16, elevation: 8 },
-  title: { fontSize: 22, fontWeight: "700", color: colors.text, marginBottom: 18 },
-  label: { fontSize: 13, fontWeight: "600", color: colors.textSecondary, marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 13, fontSize: 15, color: colors.text, marginBottom: 14, backgroundColor: colors.background },
-  passwordContainer: {
+  flex: {
+    flex: 1,
+    backgroundColor: "#f0f9ff"
+  },
+  container: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: 22,
+    paddingTop: 36,
+    paddingBottom: 36
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 20
+  },
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#00b4d8",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+    marginBottom: 8
+  },
+  logoText: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#0a2540",
+    letterSpacing: 0.5
+  },
+  subtitle: {
+    fontSize: 13,
+    color: "#0284c7",
+    fontWeight: "600",
+    marginTop: 2
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 22,
+    shadowColor: "#00b4d8",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(0, 180, 216, 0.15)"
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0a2540",
+    marginBottom: 4
+  },
+  cardSub: {
+    fontSize: 13,
+    color: "#64748b",
+    marginBottom: 16
+  },
+  inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    backgroundColor: colors.background,
-    marginBottom: 14
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    height: 50
   },
-  passwordInput: {
+  inputIcon: {
+    marginRight: 10
+  },
+  input: {
     flex: 1,
-    padding: 13,
-    fontSize: 15,
-    color: colors.text
+    fontSize: 14.5,
+    color: "#0f172a"
   },
   eyeBtn: {
-    paddingHorizontal: 12,
-    justifyContent: "center",
-    alignItems: "center"
+    padding: 6
   },
   reqContainer: {
     backgroundColor: "#f8fafc",
-    padding: 12,
     borderRadius: 10,
+    padding: 10,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    marginBottom: 16
-  },
-  reqHeader: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.textSecondary,
-    marginBottom: 6
-  },
-  reqRow: {
-    marginBottom: 4
+    borderColor: "#e2e8f0"
   },
   reqGrid: {
     flexDirection: "row",
@@ -295,24 +367,127 @@ const s = StyleSheet.create({
     gap: 6
   },
   reqBadge: {
-    fontSize: 12,
-    fontWeight: "600"
+    fontSize: 11,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6
   },
   reqPass: {
-    color: "#16a34a"
+    backgroundColor: "#ecfdf5",
+    color: "#059669",
+    fontWeight: "700"
   },
   reqFail: {
+    backgroundColor: "#f1f5f9",
     color: "#94a3b8"
   },
-  roleRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
-  roleBtn: { flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: 10, padding: 12, alignItems: "center" },
-  roleBtnActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  roleBtnText: { fontSize: 14, fontWeight: "600", color: colors.textSecondary },
-  roleBtnTextActive: { color: colors.textOnPrimary },
-  note: { fontSize: 12, color: colors.warning, marginBottom: 16, lineHeight: 18 },
-  button: { backgroundColor: colors.primary, borderRadius: 10, padding: 16, alignItems: "center", marginTop: 8, marginBottom: 16 },
-  buttonDisabled: { opacity: 0.75 },
-  buttonText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: "700" },
-  link: { textAlign: "center", color: colors.textSecondary, fontSize: 14 },
-  linkAccent: { color: colors.accent, fontWeight: "600" }
+  roleLabel: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#475569",
+    marginBottom: 6
+  },
+  roleRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 18
+  },
+  roleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc"
+  },
+  roleBtnActive: {
+    backgroundColor: "#0a2540",
+    borderColor: "#0a2540"
+  },
+  roleBtnText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#64748b"
+  },
+  roleBtnTextActive: {
+    color: "#ffffff"
+  },
+  registerBtn: {
+    backgroundColor: "#00b4d8",
+    borderRadius: 25,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#00b4d8",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+    marginBottom: 18
+  },
+  registerBtnText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.3
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#e2e8f0"
+  },
+  dividerText: {
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: "#94a3b8"
+  },
+  socialRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 16,
+    marginBottom: 20
+  },
+  socialBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  socialG: {
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#ea4335"
+  },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center"
+  },
+  switchText: {
+    fontSize: 13.5,
+    color: "#64748b"
+  },
+  switchLink: {
+    fontSize: 13.5,
+    color: "#0284c7",
+    fontWeight: "800"
+  }
 });

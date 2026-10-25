@@ -178,10 +178,20 @@ export default function App() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-icon">💧</div>
+          <div className="brand-icon" style={{ background: "rgba(0, 180, 216, 0.15)", borderRadius: "12px", padding: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="url(#cyan-grad-side)" />
+              <defs>
+                <linearGradient id="cyan-grad-side" x1="12" y1="2.69" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#00b4d8" />
+                  <stop offset="1" stopColor="#0284c7" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
           <div>
-            <div className="brand-title">Califnco</div>
-            <div className="brand-badge">Executive Console</div>
+            <div className="brand-title" style={{ letterSpacing: "-0.2px" }}>Califnco</div>
+            <div className="brand-badge" style={{ color: "#00b4d8", fontWeight: "700" }}>Pure Water, Better Life</div>
           </div>
         </div>
 

@@ -9,14 +9,17 @@ export const lightTheme = {
   isDark: false,
   primary: "#0a2540",       // deep navy
   primaryLight: "#1a3a5c",
+  navyDeep: "#051b33",
   accent: "#00b4d8",        // bright cyan
   accentDark: "#0096c7",
-  background: "#f5f7fa",
+  accentLight: "#e0f2fe",
+  background: "#f8fafc",
   card: "#ffffff",
   cardElevated: "#ffffff",
   border: "#e2e8f0",
-  text: "#1a202c",
-  textSecondary: "#64748b",
+  cardBorder: "rgba(0, 180, 216, 0.12)",
+  text: "#0f172a",
+  textSecondary: "#475569",
   textMuted: "#94a3b8",
   textOnPrimary: "#ffffff",
   headerBg: "#0a2540",
@@ -37,12 +40,15 @@ export const darkTheme = {
   isDark: true,
   primary: "#00b4d8",       // vibrant cyan brand in dark
   primaryLight: "#48cae4",
+  navyDeep: "#051b33",
   accent: "#00b4d8",
   accentDark: "#0077b6",
+  accentLight: "rgba(0, 180, 216, 0.15)",
   background: "#070d19",    // ultra-dark obsidian blue
   card: "#0f172a",          // slate 900
   cardElevated: "#1e293b",  // slate 800
   border: "#1e293b",
+  cardBorder: "rgba(0, 180, 216, 0.25)",
   text: "#f8fafc",
   textSecondary: "#94a3b8",
   textMuted: "#64748b",
