@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Dimensions, SafeAreaView
