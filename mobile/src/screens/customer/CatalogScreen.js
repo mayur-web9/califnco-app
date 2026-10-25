@@ -44,6 +44,13 @@ export default function CatalogScreen({ navigation }) {
     return list;
   }, [products, search, activeCategory]);
 
+  const renderProductItem = useCallback(({ item }) => (
+    <ProductCard
+      product={item}
+      onPress={() => navigation.navigate("ProductDetail", { product: item })}
+    />
+  ), [navigation]);
+
   if (loading) {
     return (
       <View style={[s.container, { backgroundColor: theme.background }]}>
@@ -240,13 +247,6 @@ export default function CatalogScreen({ navigation }) {
       </View>
     </View>
   );
-
-  const renderProductItem = useCallback(({ item }) => (
-    <ProductCard
-      product={item}
-      onPress={() => navigation.navigate("ProductDetail", { product: item })}
-    />
-  ), [navigation]);
 
   return (
     <View style={[s.container, { backgroundColor: theme.background }]}>
