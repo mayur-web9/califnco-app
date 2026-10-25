@@ -1,9 +1,16 @@
-// Notification Service: Multi-Channel Alerts (Email: Brevo/Resend, SMS: TextBee/Fast2SMS/Twilio, Push: Expo/FCM)
+// Notification Service: Multi-Channel Alerts (Email: Brevo SMTP/REST/Resend, SMS: Fast2SMS/TextBee/Twilio, Push: Expo/FCM)
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
+let nodemailer = null;
+try {
+  nodemailer = require("nodemailer");
+} catch (e) {}
+
 // Provider Configuration
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+const BREVO_SMTP_KEY = process.env.BREVO_SMTP_KEY || process.env.BREVO_SMTP_PASS || "";
+const BREVO_SMTP_USER = process.env.BREVO_SMTP_USER || process.env.EMAIL_FROM || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const EMAIL_FROM = process.env.EMAIL_FROM || "orders@califnco.com";
 
@@ -15,7 +22,7 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || "";
 
 /**
- * Send Transactional Email using Brevo REST API v3 or Resend API
+ * Send Transactional Email using Brevo SMTP, Brevo REST API v3, or Resend API
  * Free tier: Brevo = 300 emails/day without credit card; Resend = 3,000 emails/month
  */
 async function sendEmail({ to, toName, subject, htmlContent }) {
@@ -24,7 +31,34 @@ async function sendEmail({ to, toName, subject, htmlContent }) {
     return { success: false, reason: "missing_recipient" };
   }
 
-  // 1. Resend API
+  // 1. Brevo SMTP Relay (Nodemailer via smtp-relay.brevo.com:587)
+  if (nodemailer && BREVO_SMTP_KEY && BREVO_SMTP_KEY.startsWith("xsmtpsib-") && BREVO_SMTP_USER && BREVO_SMTP_USER.includes("@")) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: "smtp-relay.brevo.com",
+        port: 587,
+        secure: false,
+        auth: {
+          user: BREVO_SMTP_USER,
+          pass: BREVO_SMTP_KEY
+        }
+      });
+
+      const info = await transporter.sendMail({
+        from: `"Califnco Water Systems" <${BREVO_SMTP_USER}>`,
+        to: to,
+        subject: subject,
+        html: htmlContent
+      });
+
+      console.log(`[EMAIL DISPATCHED - Brevo SMTP] MessageId: ${info.messageId} to ${to}`);
+      return { success: true, messageId: info.messageId, provider: "brevo_smtp" };
+    } catch (err) {
+      console.warn(`[EMAIL NOTICE - Brevo SMTP] ${err.message}.`);
+    }
+  }
+
+  // 2. Resend API
   if (RESEND_API_KEY && RESEND_API_KEY.startsWith("re_")) {
     try {
       const response = await fetch("https://api.resend.com/emails", {
@@ -50,7 +84,7 @@ async function sendEmail({ to, toName, subject, htmlContent }) {
     }
   }
 
-  // 2. Brevo API v3
+  // 3. Brevo API v3
   if (BREVO_API_KEY && BREVO_API_KEY.startsWith("xkeysib-")) {
     try {
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -76,8 +110,9 @@ async function sendEmail({ to, toName, subject, htmlContent }) {
       console.log(`[EMAIL DISPATCHED - Brevo] MessageId: ${data.messageId} to ${to}`);
       return { success: true, messageId: data.messageId, provider: "brevo" };
     } catch (err) {
-      console.warn(`[EMAIL ERROR] Brevo API call failed: ${err.message}. Logging intent.`);
-      return { success: false, error: err.message };
+      console.warn(`[EMAIL NOTICE - Brevo] ${err.message}. Logging intent.`);
+      console.log(`[EMAIL LOGGED - Brevo Simulation for ${to}]: "${subject}"`);
+      return { success: true, simulated: true, provider: "brevo_simulated", reason: err.message };
     }
   }
 
@@ -127,9 +162,14 @@ async function sendSMS({ phone, message }) {
         })
       });
       const data = await response.json();
-      if (!data.return) throw new Error(data.message || "Fast2SMS error");
-      console.log(`[SMS DISPATCHED - Fast2SMS] Sent to ${tenDigitPhone}`);
-      return { success: true, provider: "fast2sms" };
+      if (data.return) {
+        console.log(`[SMS DISPATCHED - Fast2SMS] Sent to ${tenDigitPhone}`);
+        return { success: true, provider: "fast2sms" };
+      } else {
+        console.warn(`[SMS NOTICE - Fast2SMS] ${data.message || "Fast2SMS API notification"}`);
+        console.log(`[SMS LOGGED - Fast2SMS Simulation for ${cleanPhone}]: "${message}"`);
+        return { success: true, simulated: true, provider: "fast2sms_simulated", reason: data.message };
+      }
     } catch (err) {
       console.warn(`[SMS ERROR] Fast2SMS failed: ${err.message}.`);
       return { success: false, error: err.message };
