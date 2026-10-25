@@ -44,8 +44,12 @@ async function sendEmail({ to, toName, subject, htmlContent }) {
         }
       });
 
+      const senderEmail = (EMAIL_FROM && !EMAIL_FROM.includes("califnco.com") && !EMAIL_FROM.includes("smtp-brevo.com"))
+        ? EMAIL_FROM
+        : "mayur.patil.ac@gmail.com";
+
       const info = await transporter.sendMail({
-        from: `"Califnco Water Systems" <${BREVO_SMTP_USER}>`,
+        from: `"Califnco Water Systems" <${senderEmail}>`,
         to: to,
         subject: subject,
         html: htmlContent
